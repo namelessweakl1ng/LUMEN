@@ -1,0 +1,41 @@
+# SearXNG Docker Compose for Lumen.
+#
+# Usage:
+#   docker compose -f docker/searxng.docker-compose.yml up -d
+#   docker compose -f docker/searxng.docker-compose.yml logs -f
+#   docker compose -f docker/searxng.docker-compose.yml down
+#
+# After starting, SearXNG will be available at http://localhost:8080
+# and the JSON API will be enabled (required by Lumen).
+#
+# All persistent state lives in ./searxng-data — back this up if you
+# customize settings through the admin UI (which we recommend keeping
+# disabled; edit settings.yml directly instead).
+
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: lumen-searxng
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./searxng-data:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
+      - UWSGI_WORKERS=4
+      - UWSGI_THREADS=4
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    # SearXNG doesn't need to call out to local network resources —
+    # we keep the default bridge network.
+    networks:
+      - lumen-net
+
+networks:
+  lumen-net:
+    driver: bridge

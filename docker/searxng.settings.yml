@@ -1,0 +1,89 @@
+# SearXNG settings for Lumen.
+#
+# This file is mounted into the SearXNG container at /etc/searxng/settings.yml.
+# Adjust to taste — but keep the `search.formats` line, otherwise Lumen
+# won't be able to fetch JSON responses.
+#
+# Docs: https://docs.searxng.org/admin/settings/settings.html
+
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "Lumen SearXNG"
+  privacypolicy_url: ""
+  contact_url: ""
+
+search:
+  # Safe search is on by default; the user can override per-request.
+  safe_search: 1
+  autocomplete: ""
+  default_lang: "auto"
+  formats:
+    - html
+    - json
+
+server:
+  # Bind inside the container only — Docker maps it to the host.
+  bind_address: "0.0.0.0"
+  port: 8080
+  secret_key: "REPLACE_WITH_A_LONG_RANDOM_STRING"
+  # We disable the public /admin UI. Configuration is done via this
+  # file, not the browser.
+  limiter: false
+  image_proxy: true
+
+ui:
+  static_use_hash: true
+
+# A focused, reliable engine subset. Comment out or add to taste.
+# SearXNG ships hundreds more — see https://docs.searxng.org/admin/engines/.
+engines:
+  # General web
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    disabled: false
+  - name: brave
+    engine: brave
+    shortcut: br
+    disabled: false
+  - name: bing
+    engine: bing
+    shortcut: bi
+    disabled: false
+  - name: google
+    engine: google
+    shortcut: go
+    disabled: false
+  - name: wikipedia
+    engine: wikipedia
+    shortcut: wp
+    disabled: false
+  # News
+  - name: google news
+    engine: google_news
+    shortcut: gnews
+    disabled: false
+  - name: bing news
+    engine: bing_news
+    shortcut: binews
+    disabled: false
+  # Images
+  - name: bing images
+    engine: bing_images
+    shortcut: biimg
+    disabled: false
+  - name: duckduckgo images
+    engine: duckduckgo_images
+    shortcut: ddgimg
+    disabled: false
+  # Videos
+  - name: youtube
+    engine: youtube_noapi
+    shortcut: yt
+    disabled: false
+  - name: invidious
+    engine: invidious
+    shortcut: inv
+    disabled: true
