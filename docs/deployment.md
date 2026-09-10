@@ -68,37 +68,67 @@ You have several options:
 
 The SearXNG container itself should remain bound to `127.0.0.1:8080` on the Fedora host. Put the authentication and external exposure at the proxy/tunnel layer.
 
-### Cloudflare Quick Tunnel testing
+### Fedora authenticated bridge
 
-For temporary testing on Fedora:
+For a Fedora home server, Lumen should not tunnel directly to SearXNG.
+
+The intended temporary testing topology is:
+
+```text
+Vercel Lumen
+    │ HTTPS + bearer secret
+    ▼
+Cloudflare Quick Tunnel
+    │
+    ▼
+127.0.0.1:8787 authenticated proxy
+    │
+    ▼
+127.0.0.1:8080 SearXNG
+```
+
+The proxy is implemented by `tools/searxng-proxy.ts`. It:
+
+- binds only to `127.0.0.1:8787`
+- accepts only `GET /search`
+- requires `Authorization: Bearer <token>`
+- forwards only the allowlisted search parameters
+- always forwards to `127.0.0.1:8080/search`
+- does not forward the bearer token to SearXNG
+- times out upstream requests after `SEARXNG_TIMEOUT_MS`
+
+Generate a temporary shared secret:
 
 ```bash
-cloudflared tunnel --url http://localhost:8080
+export SEARXNG_AUTH_SECRET="$(openssl rand -hex 32)"
+```
+
+Start the proxy:
+
+```bash
+bun run searxng:proxy
+```
+
+Leave it running while the tunnel is active.
+
+In a second terminal, start the Quick Tunnel:
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:8787
 ```
 
 Cloudflare will print a temporary `https://*.trycloudflare.com` URL.
 
-Set that URL as `SEARXNG_URL` in Vercel.
-
-Quick Tunnels are intended for testing and development. They are temporary and publicly reachable unless you add an authentication layer. Do not treat a raw Quick Tunnel to SearXNG as a production security boundary.
-
-### Authenticated proxy
-
-For a long-lived remote deployment, put an authenticated reverse proxy or access-controlled tunnel in front of SearXNG.
-
-If the proxy expects:
-
-```http
-Authorization: Bearer <token>
-```
-
-set:
+Set the Vercel environment variables:
 
 ```dotenv
-SEARXNG_AUTH_SECRET=<token>
+SEARXNG_URL=https://<your-quick-tunnel-host>
+SEARXNG_AUTH_SECRET=<the-same-secret>
 ```
 
-Lumen sends this value server-side. It is never exposed as a `NEXT_PUBLIC_*` variable.
+`SEARXNG_AUTH_SECRET` must contain the same value used by the Fedora proxy. Lumen sends it only from its server-side `/api/search` handler and never exposes it as a `NEXT_PUBLIC_*` variable.
+
+Quick Tunnels are intended for testing and development. They are temporary public endpoints and should not be treated as the final production security boundary. For a long-lived deployment, replace the Quick Tunnel with a persistent access-controlled tunnel or authenticated reverse proxy.
 
 ---
 

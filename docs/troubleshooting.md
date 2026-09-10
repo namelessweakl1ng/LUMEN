@@ -100,6 +100,37 @@ The error is `retryable: true`, so the user can press the search button again im
 
 ---
 
+## "SearXNG proxy is not running"
+
+**Symptom:** Vercel cannot reach the Fedora-backed search service.
+
+**Cause:** The authenticated proxy or its Cloudflare tunnel is not running, or the tunnel is pointing at the wrong local port.
+
+**Fix:**
+
+1. On Fedora, start the proxy:
+   ```bash
+   export SEARXNG_AUTH_SECRET="$(openssl rand -hex 32)"
+   bun run searxng:proxy
+   ```
+2. Verify the proxy rejects unauthenticated requests:
+   ```bash
+   curl -i "http://127.0.0.1:8787/search?q=test&format=json"
+   ```
+   It should return `401 Unauthorized`.
+3. Verify authenticated access:
+   ```bash
+   curl -sS -H "Authorization: Bearer $SEARXNG_AUTH_SECRET" "http://127.0.0.1:8787/search?q=test&format=json"
+   ```
+   It should return SearXNG JSON.
+4. If using a Quick Tunnel, make sure it targets `http://127.0.0.1:8787`, not port `8080`.
+5. Make sure Vercel has the same `SEARXNG_AUTH_SECRET` as the Fedora proxy.
+6. If the Quick Tunnel URL changed, update `SEARXNG_URL` in Vercel and redeploy.
+
+Do not expose port `8080` directly when using the authenticated bridge.
+
+---
+
 ## CORS errors
 
 **Symptom:** The browser console shows CORS errors when Lumen tries to call `/api/search`.

@@ -105,6 +105,37 @@ src/lib/validation/search.ts
 - Never commit `docker/searxng-data/settings.yml`.
 - If SearXNG must be reachable remotely, put authentication/access control in front of it. Do not rely on the raw SearXNG URL as a security boundary.
 
+## Fedora remote access
+
+Keep the SearXNG container bound to `127.0.0.1:8080`.
+
+When Vercel needs to reach this instance, use the Lumen authenticated bridge instead of exposing SearXNG directly:
+
+```text
+127.0.0.1:8787 proxy → 127.0.0.1:8080 SearXNG
+```
+
+Start the bridge with:
+
+```bash
+export SEARXNG_AUTH_SECRET="$(openssl rand -hex 32)"
+bun run searxng:proxy
+```
+
+The bridge requires the bearer secret and accepts only `GET /search`. It has no arbitrary upstream URL or port selection.
+
+For temporary Vercel testing, point a Cloudflare Quick Tunnel at the bridge:
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:8787
+```
+
+Never point that temporary tunnel directly at `127.0.0.1:8080`.
+
+The same `SEARXNG_AUTH_SECRET` must be configured in Vercel. See [`deployment.md`](deployment.md) for the complete remote setup.
+
+---
+
 ## Updating SearXNG
 
 The Compose file currently uses the `searxng/searxng:latest` image.
