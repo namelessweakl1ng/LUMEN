@@ -15,7 +15,15 @@ export function ThemeToggle() {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
-  const isDark = resolvedTheme === "dark";
+  // Gate isDark behind `mounted` so server and client render
+  // identically during hydration. On the server, resolvedTheme is
+  // undefined (next-themes has no DOM to read from). On the client
+  // during hydration, next-themes' inline script has already
+  // resolved the theme — so resolvedTheme may be "dark" while the
+  // server rendered with undefined. Without the mounted gate, the
+  // aria-label and title would mismatch between server and client.
+  // After mount, isDark correctly reflects the resolved theme.
+  const isDark = mounted && resolvedTheme === "dark";
 
   return (
     <button
