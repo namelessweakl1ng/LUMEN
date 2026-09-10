@@ -57,7 +57,6 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "build/**",
     "next-env.d.ts",
     "skills/**",
-    "mini-services/**",
     "tests/e2e/**",
     "playwright-report/**",
     "playwright/.cache/**",
