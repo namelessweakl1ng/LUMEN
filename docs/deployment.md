@@ -1,117 +1,133 @@
 # Deployment
 
-Lumen supports three deployment modes. Pick the one that matches how private you want the setup to be.
+Lumen has two practical deployment patterns:
 
-| Mode | Next.js | SearXNG | Privacy | Cost | Notes |
-| --- | --- | --- | --- | --- | --- |
-| A | Home machine | Home machine (Docker) | Fully private | ₹0 (electricity) | Best for total privacy. |
-| B | Vercel (free) | Public host (VPS, tunnel, free container host) | Search queries transit Vercel + SearXNG host | ₹0 | Most convenient for remote access. |
-| C | Vercel | Private LAN SearXNG | — | — | **Does not work.** Vercel can't reach LAN addresses. |
+| Mode | Next.js | SearXNG | Best for |
+| --- | --- | --- | --- |
+| A | Home machine | Home machine (Docker) | Simple private household use |
+| B | Vercel | Home server or other reachable host | Remote access from anywhere |
 
 ---
 
-## Mode A — All local
+## Mode A: all local
 
-Run both pieces on a home machine (a Raspberry Pi, an old laptop, a home server).
+Run both Lumen and SearXNG on the same home machine.
 
 ### Steps
 
-1. **Install prerequisites** on the home machine: Bun/Node and Docker.
-2. **Clone the repo** and `bun install`.
-3. **Start SearXNG** (see [`searxng.md`](searxng.md)).
-4. **Set `.env`** with `SEARXNG_URL=http://localhost:8080`.
-5. **Run the production build**:
+1. Install Bun or Node.js 20.9+ and Docker.
+2. Clone the repository and install dependencies:
+   ```bash
+   bun install
+   ```
+3. Start SearXNG. See [`searxng.md`](searxng.md).
+4. Set:
+   ```dotenv
+   SEARXNG_URL=http://127.0.0.1:8080
+   ```
+5. Build and start Lumen:
    ```bash
    bun run build
    bun run start
    ```
-6. **Make it reachable from other devices** on your LAN:
-   - The Next.js server listens on port 3000 by default.
-   - Other devices on the same Wi-Fi can reach it at `http://<machine-ip>:3000`.
-   - Optionally put it behind a reverse proxy (Caddy, nginx) for HTTPS via a self-signed cert or Let's Encrypt with a custom domain.
+6. For LAN access, bind the Next.js server to an appropriate interface and restrict access with your network firewall or reverse proxy.
 
-### Notes
-
-- This is the most private setup. No traffic leaves your LAN.
-- The browser URL bar will say `http://<machine-ip>:3000` — no DNS, no TLS by default.
-- For phone access, the phone must be on the same Wi-Fi.
+This mode keeps the Lumen-to-SearXNG connection on the home machine.
 
 ---
 
-## Mode B — Vercel + public SearXNG
+## Mode B: Vercel + remote SearXNG
 
-Deploy Next.js to Vercel's free tier. Run SearXNG on a host that Vercel can reach.
+Deploy the Next.js application to Vercel while SearXNG runs elsewhere.
 
-### Step 1 — Deploy Next.js to Vercel
+The important rule is:
 
-**Via Vercel Git integration:**
+> Vercel must be able to reach `SEARXNG_URL` from the server side.
 
-1. Push the repo to GitHub/GitLab/Bitbucket.
-2. Go to <https://vercel.com/new> and import the repo.
-3. Vercel auto-detects Next.js. Use the default build settings.
-4. Add the environment variable `SEARXNG_URL` in the Vercel dashboard (Project → Settings → Environment Variables). Set it to your SearXNG URL (see below).
-5. Deploy. Vercel gives you a URL like `https://lumen-<your-name>.vercel.app`.
+A private address such as `http://192.168.1.10:8080` will not work from Vercel.
 
-**Via Vercel CLI:**
+### Step 1: deploy Lumen to Vercel
+
+The recommended workflow is Git-based:
+
+1. Push the repository to GitHub.
+2. Import the repository into Vercel.
+3. Let Vercel detect the Next.js project and use the default build settings.
+4. Add the production environment variables under **Project → Settings → Environment Variables**.
+5. Deploy.
+
+Lumen does not use any `NEXT_PUBLIC_*` environment variables.
+
+### Step 2: provide a reachable SearXNG endpoint
+
+You have several options:
+
+- A VPS or other server with an authenticated reverse proxy.
+- A home server using an access-controlled tunnel.
+- A temporary Cloudflare Quick Tunnel for development/testing.
+
+The SearXNG container itself should remain bound to `127.0.0.1:8080` on the Fedora host. Put the authentication and external exposure at the proxy/tunnel layer.
+
+### Cloudflare Quick Tunnel testing
+
+For temporary testing on Fedora:
 
 ```bash
-bun add -g vercel
-vercel          # follow the prompts
-vercel env add SEARXNG_URL   # paste your SearXNG URL when prompted
-vercel --prod
+cloudflared tunnel --url http://localhost:8080
 ```
 
-### Step 2 — Run SearXNG somewhere Vercel can reach
+Cloudflare will print a temporary `https://*.trycloudflare.com` URL.
 
-Options, roughly in order of cost:
+Set that URL as `SEARXNG_URL` in Vercel.
 
-- **Free container host** (e.g. Fly.io, Render, Koyeb). Run the SearXNG Docker image. Set the public URL as `SEARXNG_URL`.
-- **Cheap VPS** (Hetzner, DigitalOcean, etc. — ₹200–500/mo). Run Docker on the VPS. Put SearXNG behind an authenticated reverse proxy (Caddy + basic auth, or Cloudflare Access).
-- **Home server + Cloudflare Tunnel** (free). Run SearXNG at home, expose it via `cloudflared`. The tunnel gives you a public `https://*.trycloudflare.com` URL. Set that as `SEARXNG_URL`.
+Quick Tunnels are intended for testing and development. They are temporary and publicly reachable unless you add an authentication layer. Do not treat a raw Quick Tunnel to SearXNG as a production security boundary.
 
-**Critical:** put SearXNG behind authentication in this mode. Otherwise anyone who finds the URL can use your SearXNG instance.
+### Authenticated proxy
 
-### Step 3 — Verify
+For a long-lived remote deployment, put an authenticated reverse proxy or access-controlled tunnel in front of SearXNG.
 
-1. Visit your Vercel URL.
-2. Search for something. You should see results.
-3. If you see "Couldn't reach SearXNG" — your `SEARXNG_URL` is wrong, or SearXNG is unreachable from Vercel's network.
+If the proxy expects:
 
----
+```http
+Authorization: Bearer <token>
+```
 
-## Mode C — Vercel + private LAN SearXNG (does NOT work)
+set:
 
-This is listed only to document the limitation. Vercel's serverless functions run in Vercel's network. They cannot reach addresses like `192.168.1.10:8080` because those are private to your LAN.
+```dotenv
+SEARXNG_AUTH_SECRET=<token>
+```
 
-If you want Vercel + a home SearXNG, use Mode B with Cloudflare Tunnel (or similar) to expose SearXNG publicly.
+Lumen sends this value server-side. It is never exposed as a `NEXT_PUBLIC_*` variable.
 
 ---
 
 ## Environment variables
 
-See [`.env.example`](../.env.example) for the full list. In production, set these via your hosting provider's dashboard (Vercel → Settings → Environment Variables), not via a `.env` file.
+See [`.env.example`](../.env.example).
 
-| Variable | Required in prod? | Notes |
-| --- | --- | --- |
-| `SEARXNG_URL` | yes | Must be reachable from the Next.js server. |
-| `SEARXNG_AUTH_SECRET` | no | Set if SearXNG is behind a bearer-token proxy. |
-| `SEARXNG_TIMEOUT_MS` | no | Default 8000. Increase if your SearXNG is slow. |
-| `LUMEN_RATE_LIMIT_PER_MINUTE` | no | Default 60. Lower for stricter limits. |
-| `LUMEN_CACHE_TTL_MS` | no | Default 60000. |
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `SEARXNG_URL` | yes | — | Base URL of the SearXNG endpoint. |
+| `SEARXNG_AUTH_SECRET` | no | — | Bearer token for an authenticated SearXNG proxy. |
+| `SEARXNG_TIMEOUT_MS` | no | `8000` | Request timeout for SearXNG calls. |
+| `LUMEN_RATE_LIMIT_PER_MINUTE` | no | `60` | In-memory rate limit per client. |
+| `LUMEN_CACHE_TTL_MS` | no | `60000` | In-memory search cache TTL. |
 
-**Never** put secrets in `NEXT_PUBLIC_*` variables — those are visible to the browser. Lumen does not use any `NEXT_PUBLIC_*` variables.
+Never put secrets in `NEXT_PUBLIC_*` variables.
 
 ---
 
-## Verifying the deployment
+## Verification checklist
 
-After deploying, run through this checklist:
+After deployment:
 
-- [ ] Homepage loads at the deployed URL.
-- [ ] Typing a query and pressing Enter shows results.
-- [ ] Changing category / time / language / safe search updates the URL and re-searches.
-- [ ] Pagination works (Next button shows when there are more results).
-- [ ] Dark mode toggle works.
-- [ ] Settings persist across reload (localStorage).
-- [ ] No secrets appear in the browser's network tab.
-- [ ] `https://<your-vercel-url>.vercel.app/` returns 200 with `robots: noindex, nofollow`.
+- [ ] Homepage loads.
+- [ ] A normal search returns results.
+- [ ] Category, time, language, and safe-search filters work.
+- [ ] Pagination works.
+- [ ] Dark mode works.
+- [ ] Settings persist across reload.
+- [ ] SearXNG credentials are not exposed to the browser.
+- [ ] The deployed site remains `noindex, nofollow`.
+- [ ] The Fedora host is online whenever it is the SearXNG backend.

@@ -182,6 +182,6 @@ On Vercel, env vars are read at deploy time. After changing them in the dashboar
 ## Still stuck?
 
 1. Read [`docs/architecture.md`](architecture.md) to understand how the pieces fit together.
-2. Check the dev server log (`dev.log`) for stack traces.
+2. Check the terminal running the dev server for stack traces.
 3. Check the SearXNG log (`bun run searxng:logs`) for upstream errors.
 4. File an issue with both logs attached.

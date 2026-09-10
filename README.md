@@ -4,7 +4,7 @@
 
 Lumen is a small, private household search engine powered by [SearXNG](https://searxng.org). It is built for one household — a handful of people, occasional searches, zero or near-zero operating cost.
 
-It is **not** a Google clone, an AI dashboard, a marketing website, or a SaaS product. It is a piece of software: a fast, minimal search interface that treats you like an adult.
+It is **not** a Google clone, an AI dashboard, or a marketing website. It is a piece of software: a fast, minimal search interface that treats you like an adult.
 
 ---
 
@@ -18,8 +18,7 @@ It is **not** a Google clone, an AI dashboard, a marketing website, or a SaaS pr
 
 ## What Lumen is not
 
-- **Not a public search engine.** It is for your household.
-- **Not a hosted SaaS.** You run it.
+- **Not a hosted service.** Lumen is software you run yourself.
 - **Not an AI tool.** No LLMs, no chat, no embeddings.
 - **Not a marketing site.** No testimonials, no pricing, no feature grid.
 
@@ -43,7 +42,7 @@ SearXNG is replaceable: the frontend depends on a `SearchProvider` interface, no
 
 ## Requirements
 
-- [Bun](https://bun.sh/) (recommended) or Node.js 18+
+- [Bun](https://bun.sh/) (recommended) or Node.js 20.9+
 - [Docker](https://www.docker.com/) with Docker Compose (for SearXNG)
 
 ---
@@ -148,42 +147,33 @@ All configuration lives in `.env` (gitignored). See [`.env.example`](.env.exampl
 
 ## Deployment
 
-Lumen supports two deployment modes. See [`docs/deployment.md`](docs/deployment.md) for full details.
+Lumen can run entirely on your own machine, or the Next.js app can be deployed separately from SearXNG.
 
-### Local mode (recommended for households)
+### Local mode
 
-Run both Next.js and SearXNG on a home machine. The browser hits the home machine directly. Nothing leaves the LAN.
-
-```
-Browser → local Lumen → local SearXNG → internet search engines
-```
-
-### Remote mode (Vercel + public SearXNG)
-
-Deploy Next.js to Vercel's free tier. Run SearXNG on a host Vercel can reach (a VPS, a free container host, or a home server via Cloudflare Tunnel). Set `SEARXNG_URL` to the public SearXNG URL.
+Run both Next.js and SearXNG on the same home machine:
 
 ```
-Browser → Vercel Lumen → public SearXNG → internet search engines
+Browser → local Lumen → local SearXNG → search engines
 ```
 
-**Important limitation:** A Vercel serverless function cannot reach a private home-network address like `http://192.168.1.10:8080`. If you want Vercel + a home SearXNG, expose SearXNG via a tunnel (Cloudflare Tunnel, Tailscale Funnel, etc.) so Vercel can reach it. For a fully private setup, use local mode instead.
+This is the simplest setup and keeps the Lumen-to-SearXNG connection local.
 
----
+### Vercel + home SearXNG
 
-## Mock SearXNG (for development without Docker)
+You can deploy the Next.js application to Vercel and keep SearXNG on a Fedora/home server:
 
-The repository includes a tiny mock SearXNG server at `mini-services/mock-searxng/`. It returns canned JSON responses — enough to exercise the UI without running Docker.
-
-```bash
-cd mini-services/mock-searxng
-bun index.js
+```
+Browser → Vercel Lumen → secure tunnel/proxy → home SearXNG
 ```
 
-This listens on `http://127.0.0.1:8080`. Set `SEARXNG_URL=http://127.0.0.1:8080` in `.env` (note: use `127.0.0.1`, not `localhost`, to avoid IPv6 resolution issues with Node's `fetch`).
+A Vercel server cannot reach a private LAN address such as `192.168.1.10:8080` directly. The SearXNG endpoint therefore needs a network path that Vercel can reach.
 
-The mock is also auto-started by the sandbox dev script (`.zscripts/dev.sh`) so the preview environment works without Docker.
+For temporary testing, a Cloudflare Quick Tunnel can provide a public `trycloudflare.com` URL. Quick Tunnels are intended for development/testing, not as a permanent production endpoint. Do not expose an unrestricted SearXNG instance publicly for a long-lived deployment.
 
----
+For a permanent remote setup, use an authenticated reverse proxy or access-controlled tunnel in front of SearXNG. Set `SEARXNG_AUTH_SECRET` in Lumen if that proxy expects a bearer token.
+
+See [`docs/deployment.md`](docs/deployment.md) for the deployment details.
 
 ## Privacy
 
@@ -218,7 +208,7 @@ The mock is also auto-started by the sandbox dev script (`.zscripts/dev.sh`) so 
 ## Testing
 
 ```bash
-bun run test          # unit tests (56 tests)
+bun run test          # unit tests (67 tests)
 bun run test:e2e      # end-to-end tests (11 tests, requires dev server)
 ```
 
@@ -227,7 +217,6 @@ bun run test:e2e      # end-to-end tests (11 tests, requires dev server)
 ## Documentation
 
 - [`docs/architecture.md`](docs/architecture.md) — How the pieces fit together.
-- [`docs/local-development.md`](docs/local-development.md) — Setting up a dev environment.
 - [`docs/deployment.md`](docs/deployment.md) — Local + Vercel deployment.
 - [`docs/searxng.md`](docs/searxng.md) — Configuring SearXNG.
 - [`docs/troubleshooting.md`](docs/troubleshooting.md) — Common failures and fixes.
@@ -236,4 +225,4 @@ bun run test:e2e      # end-to-end tests (11 tests, requires dev server)
 
 ## License
 
-MIT. Use it, fork it, share it. Just don't turn it into a SaaS.
+Lumen is licensed under the [MIT License](LICENSE).
