@@ -20,7 +20,7 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
-      - ./searxng-data:/etc/searxng:rw
+      - ./searxng-data:/etc/searxng:rw,Z
     environment:
       - SEARXNG_BASE_URL=http://localhost:8080/
       - UWSGI_WORKERS=4
