@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "searxng:up": "docker compose -f docker/searxng.docker-compose.yml up -d",
     "searxng:down": "docker compose -f docker/searxng.docker-compose.yml down",
-    "searxng:logs": "docker compose -f docker/searxng.docker-compose.yml logs -f"
+    "searxng:logs": "docker compose -f docker/searxng.docker-compose.yml logs -f",
+    "searxng:proxy": "bun run tools/searxng-proxy.ts"
   },
   "dependencies": {
     "lucide-react": "^0.525.0",
