@@ -56,3 +56,5 @@ local-*
 /test-results/
 /blob-report/
 /playwright/.cache/
+# Git worktrees
+.worktrees/
