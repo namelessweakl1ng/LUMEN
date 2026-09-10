@@ -120,7 +120,7 @@ export function FilterBar({
       {/* Right side: time + language */}
       <div className="ml-auto flex items-center gap-3">
         <label className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span className="sr-only sm:auto">Time</span>
+          <span className="hidden sm:inline">Time</span>
           <select
             value={timeRange}
             onChange={(e) => onTimeRangeChange(e.target.value as TimeRange)}
@@ -137,7 +137,7 @@ export function FilterBar({
         </label>
 
         <label className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span className="sr-only sm:auto">Language</span>
+          <span className="hidden sm:inline">Language</span>
           <select
             value={language}
             onChange={(e) => onLanguageChange(e.target.value)}

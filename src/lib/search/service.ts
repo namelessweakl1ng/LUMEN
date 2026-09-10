@@ -94,9 +94,23 @@ export class SearchService {
       new SearXNGSearchProvider({
         baseUrl: process.env.SEARXNG_URL ?? "",
         authSecret: process.env.SEARXNG_AUTH_SECRET,
+        timeoutMs: process.env.SEARXNG_TIMEOUT_MS
+          ? Number(process.env.SEARXNG_TIMEOUT_MS)
+          : undefined,
       });
-    this.limiter = new FixedWindowLimiter(opts.rateLimitPerMinute ?? 60, 60_000);
-    this.cache = new TtlCache(opts.cacheTtlMs ?? 60_000);
+    this.limiter = new FixedWindowLimiter(
+      opts.rateLimitPerMinute ??
+        (process.env.LUMEN_RATE_LIMIT_PER_MINUTE
+          ? Number(process.env.LUMEN_RATE_LIMIT_PER_MINUTE)
+          : 60),
+      60_000,
+    );
+    this.cache = new TtlCache(
+      opts.cacheTtlMs ??
+        (process.env.LUMEN_CACHE_TTL_MS
+          ? Number(process.env.LUMEN_CACHE_TTL_MS)
+          : 60_000),
+    );
   }
 
   /**

@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type {
   SearchCategory,
   SafeSearchLevel,
@@ -11,7 +10,6 @@ import type {
  */
 export const MAX_QUERY_LENGTH = 500;
 export const MAX_PAGE_NUMBER = 50;
-export const DEFAULT_PAGE_SIZE = 10;
 
 const VALID_CATEGORIES: readonly SearchCategory[] = [
   "general",
@@ -32,8 +30,8 @@ const VALID_SAFE_SEARCH: readonly SafeSearchLevel[] = [0, 1, 2] as const;
 
 /**
  * Allowed language codes. We intentionally keep this list short — these
- * are the languages SearXNG reliably supports via its `auto-detect`
- * locale mechanism and that are useful to a household user.
+ * are the languages SearXNG reliably supports and that are useful to a
+ * household user.
  *
  * The string "auto" lets SearXNG pick.
  */
@@ -80,21 +78,36 @@ export function normalizeQuery(raw: unknown): string | null {
   return trimmed;
 }
 
-export function coerceCategory(raw: unknown): SearchCategory {
+/**
+ * Coerce a category value. Returns the value if valid, otherwise the
+ * fallback. Pass `undefined` as the fallback to detect "absent"
+ * separately from "invalid" — the page uses this to decide whether to
+ * fall back to a user-configured default.
+ */
+export function coerceCategory(
+  raw: unknown,
+  fallback: SearchCategory = "general",
+): SearchCategory {
   if (typeof raw === "string" && (VALID_CATEGORIES as readonly string[]).includes(raw)) {
     return raw as SearchCategory;
   }
-  return "general";
+  return fallback;
 }
 
-export function coerceTimeRange(raw: unknown): TimeRange {
+export function coerceTimeRange(
+  raw: unknown,
+  fallback: TimeRange = "none",
+): TimeRange {
   if (typeof raw === "string" && (VALID_TIME_RANGES as readonly string[]).includes(raw)) {
     return raw as TimeRange;
   }
-  return "none";
+  return fallback;
 }
 
-export function coerceSafeSearch(raw: unknown): SafeSearchLevel {
+export function coerceSafeSearch(
+  raw: unknown,
+  fallback: SafeSearchLevel = 1,
+): SafeSearchLevel {
   if (typeof raw === "number" && (VALID_SAFE_SEARCH as readonly number[]).includes(raw)) {
     return raw as SafeSearchLevel;
   }
@@ -104,31 +117,22 @@ export function coerceSafeSearch(raw: unknown): SafeSearchLevel {
       return n as SafeSearchLevel;
     }
   }
-  return 1;
+  return fallback;
 }
 
-export function coerceLanguage(raw: unknown): string {
+export function coerceLanguage(
+  raw: unknown,
+  fallback: string = "auto",
+): string {
   if (typeof raw === "string" && (ALLOWED_LANGUAGES as readonly string[]).includes(raw)) {
     return raw;
   }
-  return "auto";
+  return fallback;
 }
 
-export function coercePage(raw: unknown): number {
+export function coercePage(raw: unknown, fallback: number = 1): number {
+  if (raw === null || raw === undefined) return fallback;
   const n = typeof raw === "number" ? raw : Number(raw);
-  if (!Number.isFinite(n) || n < 1) return 1;
+  if (!Number.isFinite(n) || n < 1) return fallback;
   return Math.min(Math.floor(n), MAX_PAGE_NUMBER);
 }
-
-/**
- * Zod schema for the public search API. Used by the route handler to
- * validate query-string parameters before invoking the provider.
- */
-export const searchRequestSchema = z.object({
-  q: z.string().max(MAX_QUERY_LENGTH),
-  category: z.enum(VALID_CATEGORIES as unknown as [SearchCategory, ...SearchCategory[]]).default("general"),
-  time: z.enum(VALID_TIME_RANGES as unknown as [TimeRange, ...TimeRange[]]).default("none"),
-  language: z.string().default("auto"),
-  safe: z.union([z.number(), z.string()]).default(1),
-  page: z.union([z.number(), z.string()]).default(1),
-});

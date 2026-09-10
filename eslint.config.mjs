@@ -19,6 +19,12 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     // React rules
     "react-hooks/exhaustive-deps": "off",
     "react-hooks/purity": "off",
+    // The set-state-in-effect rule flags common, intentional patterns:
+    //  - next-themes mount sync (setMounted(true))
+    //  - syncing input value to URL on back/forward navigation
+    //  - clearing stale search state when the query changes
+    // These are deliberate and safe for this app's scale.
+    "react-hooks/set-state-in-effect": "off",
     "react/no-unescaped-entities": "off",
     "react/display-name": "off",
     "react/prop-types": "off",
@@ -50,10 +56,8 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "examples/**",
     "skills/**",
     "mini-services/**",
-    "scripts/**",
     "tests/e2e/**",
     "playwright-report/**",
     "playwright/.cache/**",

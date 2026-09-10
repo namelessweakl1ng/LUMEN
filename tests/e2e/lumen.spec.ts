@@ -37,17 +37,17 @@ test.describe("Lumen e2e", () => {
     await expect(page.getByRole("heading", { level: 3 }).first()).toBeVisible();
   });
 
-  test("empty results render gracefully", async ({ page }) => {
-    // A query that the mock SearXNG won't have results for. (Mock
-    // returns the same canned results regardless of query, so this
-    // test mostly verifies the message structure if results were
-    // empty. For a real SearXNG, use a nonsense query.)
+  test("empty or error state renders gracefully for nonsense query", async ({ page }) => {
+    // With the mock SearXNG, this query returns the same canned
+    // results as any other. With a real SearXNG, it may return zero
+    // results or an error. All three states (results, empty, error)
+    // are acceptable — the test just verifies the page doesn't crash.
     await page.goto("/?q=zzzznotarealquery12345");
-    // Either we see results (mock) or the empty message (real SearXNG
-    // with no matches). Both are acceptable.
+    // Wait for SOMETHING to appear: results, empty message, or error.
     const results = page.getByRole("region", { name: "Search results" });
     const empty = page.getByText(/No results for/);
-    await expect(results.or(empty)).toBeVisible({ timeout: 10_000 });
+    const error = page.getByRole("alert");
+    await expect(results.or(empty).or(error)).toBeVisible({ timeout: 15_000 });
   });
 
   test("error state renders when SearXNG is unreachable", async ({ page }) => {

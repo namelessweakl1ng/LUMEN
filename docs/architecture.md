@@ -106,13 +106,13 @@ src/
 ## State management
 
 - **URL**: query, category, time, language, safe search, page. The URL is the source of truth.
-- **localStorage** (via Zustand `persist`): user preferences (theme, default category, default language, safe search default, open-in-new-tab, show-favicons).
+- **localStorage** (via Zustand `persist`): user preferences (default category, default time range, default language, safe search, open-in-new-tab, show-favicons). Theme is managed separately by next-themes (its own localStorage key).
 - **Server state**: in-memory cache + rate limiter in the `SearchService` singleton.
 
 No database. No Redis. No accounts.
 
 ## Rendering
 
-- The homepage is a Client Component because it uses `useSearchParams`, `useRouter`, and `useKeyboardShortcut`.
+- The homepage is a Client Component wrapped in `<Suspense>` (required by Next.js for `useSearchParams` during static prerendering).
 - The layout is a Server Component.
 - The API route runs on the Node.js runtime (`runtime = "nodejs"`) so it can use `performance.now()` and the AbortController. It is marked `dynamic = "force-dynamic"` so Vercel doesn't try to statically optimize it.

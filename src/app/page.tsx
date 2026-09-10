@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LumenWordmark } from "@/components/layout/wordmark";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -24,23 +25,37 @@ import type { SearchCategory, TimeRange } from "@/types/search";
 
 const PAGE_SIZE = 10;
 
+/**
+ * The default export wraps <HomeContent /> in <Suspense> so that
+ * useSearchParams() works during static prerendering. Without this,
+ * `next build` fails with "useSearchParams() should be wrapped in a
+ * suspense boundary".
+ */
 export default function HomePage() {
-  return <HomeContent />;
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
+  );
 }
 
 function HomeContent() {
   const router = useRouter();
   const sp = useSearchParams();
 
+  const settings = useSettings();
+
   // Read state from URL so the URL is the single source of truth.
+  // When a URL parameter is ABSENT, fall back to the user's saved
+  // default from Settings. When a parameter is PRESENT but invalid,
+  // the coerce functions return a hardcoded safe default.
   const queryFromUrl = normalizeQuery(sp.get("q")) ?? "";
-  const category = coerceCategory(sp.get("category"));
-  const timeRange = coerceTimeRange(sp.get("time"));
-  const language = coerceLanguage(sp.get("language"));
-  const safeSearch = coerceSafeSearch(sp.get("safe"));
+  const category = coerceCategory(sp.get("category"), settings.defaultCategory);
+  const timeRange = coerceTimeRange(sp.get("time"), settings.defaultTimeRange);
+  const language = coerceLanguage(sp.get("language"), settings.defaultLanguage);
+  const safeSearch = coerceSafeSearch(sp.get("safe"), settings.safeSearch);
   const page = coercePage(sp.get("page"));
 
-  const settings = useSettings();
   const isSearchMode = queryFromUrl.length > 0;
 
   // Input value: initialize from URL so refresh keeps the text. After

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Settings, X } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useSettings } from "@/lib/settings/store";
 import { ALLOWED_LANGUAGES } from "@/lib/validation/search";
 import type { SafeSearchLevel, SearchCategory, TimeRange } from "@/types/search";
@@ -37,7 +38,9 @@ const LANGUAGE_LABELS: Record<string, string> = {
  * A small, modal-style settings panel.
  *
  * Settings persist to localStorage (see lib/settings/store). No
- * accounts, no server round-trip.
+ * accounts, no server round-trip. Theme is managed by next-themes
+ * directly — we read/write it via useTheme() so the settings panel
+ * and the header toggle stay in sync.
  */
 export function SettingsButton() {
   const [open, setOpen] = React.useState(false);
@@ -61,6 +64,7 @@ export function SettingsButton() {
 
 function SettingsPanel({ onClose }: { onClose: () => void }) {
   const s = useSettings();
+  const { theme, setTheme } = useTheme();
   const titleId = "lumen-settings-title";
 
   // Close on Escape.
@@ -113,8 +117,8 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
         <div className="space-y-4">
           <Field label="Theme">
             <SegmentedControl
-              value={s.theme}
-              onChange={(v) => s.setTheme(v as LumenSettings_theme)}
+              value={theme ?? "system"}
+              onChange={(v) => setTheme(v)}
               options={[
                 { value: "system", label: "System" },
                 { value: "light", label: "Light" },
@@ -180,7 +184,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
               onChange={s.setOpenInNewTab}
             />
             <Toggle
-              label="Show favicons"
+              label="Show favicons (loads from Google)"
               checked={s.showFavicons}
               onChange={s.setShowFavicons}
             />
@@ -204,8 +208,6 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
-
-type LumenSettings_theme = "system" | "light" | "dark";
 
 function Field({
   label,
