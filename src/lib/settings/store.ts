@@ -3,6 +3,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { SafeSearchLevel, SearchCategory, TimeRange } from "@/types/search";
+import {
+  SETTINGS_DEFAULTS,
+  SETTINGS_VERSION,
+  migrateSettings,
+  type LumenSettingsData,
+} from "@/lib/settings/migrate";
 
 /**
  * Client-side settings.
@@ -14,17 +20,7 @@ import type { SafeSearchLevel, SearchCategory, TimeRange } from "@/types/search"
  * which has its own localStorage key ("theme"). Keeping theme out of
  * this store avoids two sources of truth fighting each other.
  */
-export interface LumenSettings {
-  defaultCategory: SearchCategory;
-  defaultTimeRange: TimeRange;
-  defaultLanguage: string;
-  safeSearch: SafeSearchLevel;
-  /** Open result links in a new tab by default. */
-  openInNewTab: boolean;
-  /** Show favicons next to results. Disabled by default for privacy —
-   *  enabling it loads favicons from a third-party service. */
-  showFavicons: boolean;
-}
+export type LumenSettings = LumenSettingsData;
 
 export interface LumenSettingsActions {
   setDefaultCategory: (category: SearchCategory) => void;
@@ -36,14 +32,7 @@ export interface LumenSettingsActions {
   reset: () => void;
 }
 
-const DEFAULTS: LumenSettings = {
-  defaultCategory: "general",
-  defaultTimeRange: "none",
-  defaultLanguage: "auto",
-  safeSearch: 1,
-  openInNewTab: true,
-  showFavicons: false,
-};
+const DEFAULTS: LumenSettings = { ...SETTINGS_DEFAULTS };
 
 export const useSettings = create<LumenSettings & LumenSettingsActions>()(
   persist(
@@ -59,7 +48,37 @@ export const useSettings = create<LumenSettings & LumenSettingsActions>()(
     }),
     {
       name: "lumen-settings",
-      version: 2,
+      version: SETTINGS_VERSION,
+      // Migrate older persisted versions (e.g. v1 which included a
+      // `theme` field) into the current shape. Without this, Zustand
+      // emits a console warning on hydration when the persisted
+      // version differs from `version` above.
+      migrate: migrateSettings,
+      // Only persist the data fields — never persist the action
+      // functions. Without partialize, Zustand persists the entire
+      // store state including the setter functions, which is both
+      // wasteful and fragile (functions don't survive JSON
+      // round-trips cleanly).
+      partialize: (state): LumenSettingsData => ({
+        defaultCategory: state.defaultCategory,
+        defaultTimeRange: state.defaultTimeRange,
+        defaultLanguage: state.defaultLanguage,
+        safeSearch: state.safeSearch,
+        openInNewTab: state.openInNewTab,
+        showFavicons: state.showFavicons,
+      }),
+      // Defensive merge: even when the persisted version matches the
+      // current version, validate every field so a manually corrupted
+      // localStorage entry can't crash hydration or inject invalid
+      // enum values. Without this, Zustand does a shallow spread of
+      // the persisted state, which would trust localStorage blindly.
+      // The merge function receives the current (in-memory) state
+      // which already has the action functions attached — we spread
+      // the normalized data on top so the actions survive.
+      merge: (persisted, currentState) => ({
+        ...currentState,
+        ...migrateSettings(persisted, SETTINGS_VERSION),
+      }),
     },
   ),
 );
