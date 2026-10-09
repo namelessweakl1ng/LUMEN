@@ -48,8 +48,6 @@ local-*
 # Skills directory
 /skills/
 
-# SearXNG persistent config (contains a generated secret_key)
-/docker/searxng-data/
 
 # Playwright
 /playwright-report/
@@ -72,3 +70,12 @@ local-*
 **/.ruff_cache/
 **/.mypy_cache/
 *.py[cod]
+
+# Local environment files (keep examples tracked)
+**/.env.*
+!**/.env.example
+
+# Python test coverage
+**/.coverage
+**/.coverage.*
+**/htmlcov/
