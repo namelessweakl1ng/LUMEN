@@ -58,3 +58,4 @@ The Dockerfiles accept optional BuildKit secrets `build_ca` (a trusted PEM CA bu
 | `LUMEN_RATE_LIMIT_PER_MINUTE` | 120 | 1–10000 |
 
 Configuration validates at startup. These are process-local budgets; more workers multiply upstream traffic. Zero cache TTL/size disables useful caching. Keep concurrency and quotas compatible with each provider's limits.
+The query timeout is a separate overall deadline. Raise `LUMEN_QUERY_TIMEOUT_SECONDS` when raising the engine timeout above its default, or the overall deadline will end the search first.

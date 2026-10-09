@@ -149,6 +149,27 @@ async def test_cache_bounds_expiration_and_retry_after():
         assert engine.calls == 1
 
 
+async def test_unavailable_backoff_keeps_unavailable_status():
+    class Unavailable(Engine):
+        async def search(self, query, client):
+            self.calls += 1
+            from app.engines.base import AdapterError
+
+            raise AdapterError("Source unavailable", retry_after=10, status="unavailable")
+
+    async with httpx.AsyncClient() as client:
+        engine = Unavailable()
+        service = SearchService({"fake": engine}, client)
+        first = await service.search(SearchQuery(q="first"))
+        second = await service.search(SearchQuery(q="second"))
+        assert [first.engine_status[0].status, second.engine_status[0].status] == [
+            "unavailable",
+            "unavailable",
+        ]
+        assert engine.calls == 1
+        assert service.engine_metrics["fake"]["unavailable"] == 2
+
+
 def test_repeated_query_values_preserve_order():
     assert canonical_url("https://example.com/?z=2&z=1") != canonical_url(
         "https://example.com/?z=1&z=2"

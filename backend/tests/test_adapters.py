@@ -349,6 +349,23 @@ async def test_unavailable_retry_after_defers_to_orchestrator():
             await GitHub().search(SearchQuery(q="python"), client)
     assert len(attempts) == 1
     assert error.value.retry_after == 21
+    assert error.value.status == "unavailable"
+
+
+@pytest.mark.asyncio
+async def test_adapter_uses_configured_client_timeout():
+    seen = []
+
+    def handler(request):
+        seen.append(request.extensions["timeout"])
+        return httpx.Response(200, json={"items": []})
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), timeout=httpx.Timeout(12, connect=3)
+    ) as client:
+        await GitHub().search(SearchQuery(q="python"), client)
+    assert seen[0]["read"] == 12
+    assert seen[0]["connect"] == 3
 
 
 @pytest.mark.asyncio

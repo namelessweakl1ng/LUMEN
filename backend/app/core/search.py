@@ -4,13 +4,14 @@ import asyncio
 import time
 from collections import deque
 from collections.abc import Mapping
-from typing import ClassVar, Protocol
+from typing import ClassVar, Literal, Protocol
 
 import httpx
 
 from app.core.cache import SearchCache
 from app.core.ranking import rank_results
 from app.core.urls import canonical_url  # noqa: F401 - public backwards compatible export
+from app.engines.base import AdapterError
 from app.models import EngineStatus, SearchQuery, SearchResponse, SearchResult
 
 
@@ -49,6 +50,7 @@ class SearchService:
         self.cache = SearchCache(cache_size, cache_ttl)
         self.calls: dict[str, deque[float]] = {key: deque() for key in engines}
         self.cooldown: dict[str, float] = {}
+        self.cooldown_status: dict[str, Literal["error", "rate_limited", "unavailable"]] = {}
         self.engine_metrics = {
             name: {
                 "requests": 0,
@@ -103,7 +105,16 @@ class SearchService:
         history = self.calls[key]
         while history and history[0] <= start - 60:
             history.popleft()
-        if self.cooldown.get(key, 0) > start or len(history) >= engine.rate_limit_per_minute:
+        if self.cooldown.get(key, 0) > start:
+            status = self.cooldown_status.get(key, "rate_limited")
+            return [], EngineStatus(
+                engine=key,
+                status=status,
+                message="Source temporarily unavailable"
+                if status == "unavailable"
+                else "Source request limit reached",
+            )
+        if len(history) >= engine.rate_limit_per_minute:
             return [], EngineStatus(
                 engine=key, status="rate_limited", message="Source request limit reached"
             )
@@ -128,9 +139,16 @@ class SearchService:
             retry = getattr(error, "retry_after", None)
             if retry is not None:
                 self.cooldown[key] = time.monotonic() + min(max(float(retry), 1), 3600)
+                self.cooldown_status[key] = (
+                    error.status if isinstance(error, AdapterError) else "rate_limited"
+                )
             return [], EngineStatus(
                 engine=key,
-                status="rate_limited" if retry is not None else "error",
+                status=error.status
+                if isinstance(error, AdapterError)
+                else "rate_limited"
+                if retry is not None
+                else "error",
                 message="Source temporarily unavailable",
                 latency_ms=round((time.monotonic() - start) * 1000, 2),
             )

@@ -8,7 +8,7 @@ import random
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 from urllib.parse import urlsplit
 
 import httpx
@@ -17,9 +17,17 @@ from app.models import SearchQuery, SearchResult
 
 
 class AdapterError(Exception):
-    def __init__(self, message: str, retry_after: float | None = None):
+    def __init__(
+        self,
+        message: str,
+        retry_after: float | None = None,
+        status: Literal["error", "rate_limited", "unavailable"] | None = None,
+    ):
         super().__init__(message)
         self.retry_after = retry_after
+        self.status: Literal["error", "rate_limited", "unavailable"] = status or (
+            "rate_limited" if retry_after is not None else "error"
+        )
 
 
 class _Text(HTMLParser):
@@ -141,7 +149,7 @@ class SearchEngine:
         for attempt in range(2):
             try:
                 async with client.stream(
-                    "GET", url, params=params, headers=headers, timeout=8, follow_redirects=False
+                    "GET", url, params=params, headers=headers, follow_redirects=False
                 ) as response:
                     chunks = bytearray()
                     async for chunk in response.aiter_bytes():
@@ -165,6 +173,7 @@ class SearchEngine:
                 raise AdapterError(
                     "Source temporarily unavailable",
                     retry_after(response.headers.get("retry-after"), 60),
+                    status="unavailable",
                 )
             if response.status_code in {502, 503, 504} and attempt == 0:
                 await asyncio.sleep(0.1 + random.uniform(0, 0.05))
