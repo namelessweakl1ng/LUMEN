@@ -1,163 +1,60 @@
 # Deployment
 
-Lumen has two practical deployment patterns:
+## Docker Compose
 
-| Mode | Next.js | SearXNG | Best for |
-| --- | --- | --- | --- |
-| A | Home machine | Home machine (Docker) | Simple private household use |
-| B | Vercel | Home server or other reachable host | Remote access from anywhere |
+Install Docker Engine and the Compose plugin (on Fedora, use the official Docker installation instructions or a compatible Compose-enabled container runtime). From the checkout:
 
----
-
-## Mode A: all local
-
-Run both Lumen and SearXNG on the same home machine.
-
-### Steps
-
-1. Install Bun or Node.js 20.9+ and Docker.
-2. Clone the repository and install dependencies:
-   ```bash
-   bun install
-   ```
-3. Start SearXNG. See [`searxng.md`](searxng.md).
-4. Set:
-   ```dotenv
-   SEARXNG_URL=http://127.0.0.1:8080
-   ```
-5. Build and start Lumen:
-   ```bash
-   bun run build
-   bun run start
-   ```
-6. For LAN access, bind the Next.js server to an appropriate interface and restrict access with your network firewall or reverse proxy.
-
-This mode keeps the Lumen-to-SearXNG connection on the home machine.
-
----
-
-## Mode B: Vercel + remote SearXNG
-
-Deploy the Next.js application to Vercel while SearXNG runs elsewhere.
-
-The important rule is:
-
-> Vercel must be able to reach `SEARXNG_URL` from the server side.
-
-A private address such as `http://192.168.1.10:8080` will not work from Vercel.
-
-### Step 1: deploy Lumen to Vercel
-
-The recommended workflow is Git-based:
-
-1. Push the repository to GitHub.
-2. Import the repository into Vercel.
-3. Let Vercel detect the Next.js project and use the default build settings.
-4. Add the production environment variables under **Project → Settings → Environment Variables**.
-5. Deploy.
-
-Lumen does not use any `NEXT_PUBLIC_*` environment variables.
-
-### Step 2: provide a reachable SearXNG endpoint
-
-You have several options:
-
-- A VPS or other server with an authenticated reverse proxy.
-- A home server using an access-controlled tunnel.
-- A temporary Cloudflare Quick Tunnel for development/testing.
-
-The SearXNG container itself should remain bound to `127.0.0.1:8080` on the Fedora host. Put the authentication and external exposure at the proxy/tunnel layer.
-
-### Fedora authenticated bridge
-
-For a Fedora home server, Lumen should not tunnel directly to SearXNG.
-
-The intended temporary testing topology is:
-
-```text
-Vercel Lumen
-    │ HTTPS + bearer secret
-    ▼
-Cloudflare Quick Tunnel
-    │
-    ▼
-127.0.0.1:8787 authenticated proxy
-    │
-    ▼
-127.0.0.1:8080 SearXNG
+```sh
+cp .env.example .env
+docker compose config --quiet
+docker compose up --build -d
+docker compose ps
+curl --fail http://localhost:3000/api/v1/health
 ```
 
-The proxy is implemented by `tools/searxng-proxy.ts`. It:
+Open http://localhost:3000. No paid API key, Redis, PostgreSQL or SearXNG service is required. Backend and frontend containers run as non-root users and have health checks. Production builds use frozen uv and Bun lockfiles and versioned build images. Dependency updates should regenerate locks deliberately and rerun validation.
 
-- binds only to `127.0.0.1:8787`
-- accepts only `GET /search`
-- requires `Authorization: Bearer <token>`
-- forwards only the allowlisted search parameters
-- always forwards to `127.0.0.1:8080/search`
-- does not forward the bearer token to SearXNG
-- times out upstream requests after `SEARXNG_TIMEOUT_MS`
+The backend is reachable only on the internal Compose network. Only port `LUMEN_PORT` (default 3000) is published. For internet deployment put TLS and an appropriately configured reverse proxy in front of it, control ingress and upstream quotas, and keep diagnostics private. Do not log query strings in reverse-proxy access logs.
 
-Generate a temporary shared secret:
+`LUMEN_BACKEND_URL` is a fixed server-side frontend setting; Compose sets it to `http://backend:8000`. Optional `GITHUB_TOKEN`, `BRAVE_API_KEY`, `CROSSREF_MAILTO` and `LUMEN_DIAGNOSTICS_TOKEN` belong only on the backend. The browser uses the same-origin Next.js proxy; backend cross-origin browser access is not enabled. Never prefix credentials with `NEXT_PUBLIC_`.
 
-```bash
-export SEARXNG_AUTH_SECRET="$(openssl rand -hex 32)"
+## Local development
+
+Install Python 3.12+, uv, Node 22 and Bun 1.3.4. In separate terminals:
+
+```sh
+cd backend
+uv sync --frozen
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log --no-proxy-headers
 ```
 
-Start the proxy:
-
-```bash
-bun run searxng:proxy
+```sh
+cd frontend
+bun install --frozen-lockfile
+LUMEN_BACKEND_URL=http://127.0.0.1:8000 bun run dev
 ```
 
-Leave it running while the tunnel is active.
+Environment variables must be exported to the local backend process; copying the root `.env` alone does not inject them into a shell. The Compose CLI loads that file for its substitutions.
 
-In a second terminal, start the Quick Tunnel:
+## Troubleshooting
 
-```bash
-cloudflared tunnel --url http://127.0.0.1:8787
-```
+Run `docker compose ps` and `docker compose logs backend frontend`. Health checks verify the application, not every upstream provider. Inspect `/api/v1/engines` and search status summaries for missing credentials, throttling or failed sources. Confirm outbound DNS/HTTPS access to configured provider domains. A rate limit is not a reason to bypass provider restrictions. Retry after the provider's backoff period or narrow engine selections.
 
-Cloudflare will print a temporary `https://*.trycloudflare.com` URL.
+Use `docker compose build` for production-image validation and `docker compose down` to stop. Collections remain in the browser; clearing site storage deletes them. Export before changing deployment origin.
 
-Set the Vercel environment variables:
+## Corporate or cloud network trust
 
-```dotenv
-SEARXNG_URL=https://<your-quick-tunnel-host>
-SEARXNG_AUTH_SECRET=<the-same-secret>
-```
+The Dockerfiles accept optional BuildKit secrets `build_ca` (a trusted PEM CA bundle) and `build_proxy` (the HTTPS proxy URL) during dependency installation. They are mounted only for the install step and are not copied into final images. Supply these via `docker build --secret id=build_ca,src=/path/to/trusted-ca.pem --secret id=build_proxy,env=HTTPS_PROXY`; repeat for each component as needed. Resolve build-network DNS through supported Docker network/host settings. Do not disable TLS or lockfile checksum verification. Runtime access through a private CA requires a separate operator-managed trust mount and HTTPS proxy configuration.
 
-`SEARXNG_AUTH_SECRET` must contain the same value used by the Fedora proxy. Lumen sends it only from its server-side `/api/search` handler and never exposes it as a `NEXT_PUBLIC_*` variable.
+## Backend tuning
 
-Quick Tunnels are intended for testing and development. They are temporary public endpoints and should not be treated as the final production security boundary. For a long-lived deployment, replace the Quick Tunnel with a persistent access-controlled tunnel or authenticated reverse proxy.
+| Variable | Default | Valid range |
+| --- | --- | --- |
+| `LUMEN_CACHE_TTL_SECONDS` | 120 | 0–3600 |
+| `LUMEN_CACHE_MAX_ENTRIES` | 128 | 0–4096 |
+| `LUMEN_ENGINE_TIMEOUT_SECONDS` | 8 | 0.1–60 |
+| `LUMEN_QUERY_TIMEOUT_SECONDS` | 9 | 0.1–120 |
+| `LUMEN_MAX_OUTBOUND_CONCURRENCY` | 12 | 1–128 |
+| `LUMEN_RATE_LIMIT_PER_MINUTE` | 120 | 1–10000 |
 
----
-
-## Environment variables
-
-See [`.env.example`](../.env.example).
-
-| Variable | Required | Default | Description |
-| --- | --- | --- | --- |
-| `SEARXNG_URL` | yes | — | Base URL of the SearXNG endpoint. |
-| `SEARXNG_AUTH_SECRET` | no | — | Bearer token for an authenticated SearXNG proxy. |
-| `SEARXNG_TIMEOUT_MS` | no | `8000` | Request timeout for SearXNG calls. |
-| `LUMEN_RATE_LIMIT_PER_MINUTE` | no | `60` | In-memory rate limit per client. |
-| `LUMEN_CACHE_TTL_MS` | no | `60000` | In-memory search cache TTL. |
-
-Never put secrets in `NEXT_PUBLIC_*` variables.
-
----
-
-## Verification checklist
-
-After deployment:
-
-- [ ] Homepage loads.
-- [ ] A normal search returns results.
-- [ ] Category, time, language, and safe-search filters work.
-- [ ] Pagination works.
-- [ ] Dark mode works.
-- [ ] Settings persist across reload.
-- [ ] SearXNG credentials are not exposed to the browser.
-- [ ] The deployed site remains `noindex, nofollow`.
-- [ ] The Fedora host is online whenever it is the SearXNG backend.
+Configuration validates at startup. These are process-local budgets; more workers multiply upstream traffic. Zero cache TTL/size disables useful caching. Keep concurrency and quotas compatible with each provider's limits.

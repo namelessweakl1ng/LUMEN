@@ -58,3 +58,17 @@ local-*
 /playwright/.cache/
 # Git worktrees
 .worktrees/
+
+# LUMEN V2 monorepo generated files
+**/.next/
+**/out/
+**/coverage/
+**/playwright-report/
+**/test-results/
+**/blob-report/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+*.py[cod]
