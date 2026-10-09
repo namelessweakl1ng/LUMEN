@@ -1,0 +1,40 @@
+{
+  "mode": "live official provider APIs, one request per configured source",
+  "sources": [
+    {
+      "engine": "wikipedia",
+      "status": "success",
+      "results": 3,
+      "latency_ms": 549.363
+    },
+    {
+      "engine": "github",
+      "status": "success",
+      "results": 3,
+      "latency_ms": 779.985
+    },
+    {
+      "engine": "crossref",
+      "status": "success",
+      "results": 3,
+      "latency_ms": 453.015
+    },
+    {
+      "engine": "hackernews",
+      "status": "success",
+      "results": 3,
+      "latency_ms": 458.958
+    },
+    {
+      "engine": "commons",
+      "status": "success",
+      "results": 3,
+      "latency_ms": 906.992
+    },
+    {
+      "engine": "brave",
+      "status": "unconfigured",
+      "results": 0
+    }
+  ]
+}

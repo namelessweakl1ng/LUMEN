@@ -1,3 +1,5 @@
+> Historical V1 document. SearXNG is not used by V2. See [migration](../../migration-v2.md).
+
 # SearXNG Bridge Design
 
 **Status:** Approved design, pending written-spec review

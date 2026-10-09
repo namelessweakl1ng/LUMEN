@@ -1,3 +1,5 @@
+> Historical V1 document. SearXNG is not used by V2. See [migration](../../migration-v2.md).
+
 # SearXNG Bridge Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

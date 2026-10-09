@@ -1,0 +1,37 @@
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      BRAVE_API_KEY: ${BRAVE_API_KEY:-}
+      CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
+      LUMEN_DIAGNOSTICS_TOKEN: ${LUMEN_DIAGNOSTICS_TOKEN:-}
+      LUMEN_CACHE_TTL_SECONDS: ${LUMEN_CACHE_TTL_SECONDS:-120}
+      LUMEN_CACHE_MAX_ENTRIES: ${LUMEN_CACHE_MAX_ENTRIES:-128}
+      LUMEN_ENGINE_TIMEOUT_SECONDS: ${LUMEN_ENGINE_TIMEOUT_SECONDS:-8}
+      LUMEN_QUERY_TIMEOUT_SECONDS: ${LUMEN_QUERY_TIMEOUT_SECONDS:-9}
+      LUMEN_MAX_OUTBOUND_CONCURRENCY: ${LUMEN_MAX_OUTBOUND_CONCURRENCY:-12}
+      LUMEN_RATE_LIMIT_PER_MINUTE: ${LUMEN_RATE_LIMIT_PER_MINUTE:-120}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${LUMEN_PORT:-3000}:3000"
+    environment:
+      LUMEN_BACKEND_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3

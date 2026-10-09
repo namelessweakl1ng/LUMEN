@@ -1,0 +1,7 @@
+{
+  "wikipedia": {"query":{"search":[{"title":"Linux","pageid":6097297,"snippet":"An open source <span class=\"searchmatch\">Linux</span> operating system."}]}},
+  "github": {"items":[{"id":2325298,"full_name":"torvalds/linux","html_url":"https://github.com/torvalds/linux","description":"Linux kernel source tree","stargazers_count":100000,"language":"C","updated_at":"2026-10-01T12:00:00Z"}]},
+  "crossref": {"message":{"items":[{"DOI":"10.1234/lumen-fixture","title":["Linux research fixture"],"URL":"https://doi.org/10.1234/lumen-fixture","author":[{"given":"Test","family":"Author"}],"publisher":"Fixture Press","published":{"date-parts":[[2026,10,1]]}}]}},
+  "hackernews": {"hits":[{"objectID":"12345","title":"Linux kernel discussion fixture","url":"https://github.com/torvalds/linux","points":42,"author":"fixture-author","created_at":"2026-10-01T12:00:00Z"}]},
+  "commons": {"query":{"pages":{"123":{"pageid":123,"title":"File:Linux fixture.svg","imageinfo":[{"url":"https://upload.wikimedia.org/wikipedia/commons/a/ab/Linux_fixture.svg","thumburl":"https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Linux_fixture.svg/200px-Linux_fixture.svg.png","descriptionurl":"https://commons.wikimedia.org/wiki/File:Linux_fixture.svg","extmetadata":{"LicenseShortName":{"value":"CC BY-SA 4.0"},"Artist":{"value":"Fixture author"},"ImageDescription":{"value":"Linux image fixture"},"LicenseUrl":{"value":"https://creativecommons.org/licenses/by-sa/4.0/"}}}]}}}}
+}

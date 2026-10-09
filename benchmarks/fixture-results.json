@@ -1,0 +1,12 @@
+{
+  "mode": "fixture HTTP transport, 15ms delay per source; not live-provider measurements",
+  "requests": 50,
+  "median_ms": 17.637,
+  "p95_ms": 55.666,
+  "concurrent_batch_requests": 10,
+  "concurrent_batch_ms": 72.294,
+  "concurrent_results": 30,
+  "cache_hit_rate": 0.4,
+  "engine_failures": 0,
+  "engine_timeouts": 0
+}

@@ -1,0 +1,188 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Lumen visual system.
+ *
+ * Goals:
+ *  - monochrome foundation, high contrast, restrained accent
+ *  - sharp geometry (2-4px radii, never 16px+)
+ *  - generous whitespace, thin borders
+ *  - no gradients, no glassmorphism, no blobs
+ *  - engineered, not decorated
+ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo,
+    Consolas, "Liberation Mono", monospace;
+
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+}
+
+:root {
+  /* Warm off-white background, near-black text. */
+  --background: oklch(0.985 0.002 95);
+  --foreground: oklch(0.18 0.005 95);
+
+  --muted: oklch(0.96 0.002 95);
+  --muted-foreground: oklch(0.48 0.005 95);
+
+  --border: oklch(0.9 0.002 95);
+  --input: oklch(0.9 0.002 95);
+  --ring: oklch(0.4 0.012 230);
+
+  /* Restrained accent: a quiet, slightly cool blue. Used only for
+     focus rings, active states, and links. */
+  --accent: oklch(0.45 0.012 230);
+  --accent-foreground: oklch(0.99 0 0);
+
+  --card: oklch(0.995 0 0);
+  --card-foreground: oklch(0.18 0.005 95);
+
+  --popover: oklch(0.995 0 0);
+  --popover-foreground: oklch(0.18 0.005 95);
+
+  --primary: oklch(0.22 0.005 95);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.95 0.002 95);
+  --secondary-foreground: oklch(0.22 0.005 95);
+
+  --destructive: oklch(0.5 0.18 28);
+  --destructive-foreground: oklch(0.99 0 0);
+}
+
+.dark {
+  /* Near-black background, off-white text. Same hues as light mode. */
+  --background: oklch(0.155 0.003 95);
+  --foreground: oklch(0.94 0.002 95);
+
+  --muted: oklch(0.21 0.003 95);
+  --muted-foreground: oklch(0.62 0.004 95);
+
+  --border: oklch(0.28 0.004 95);
+  --input: oklch(0.28 0.004 95);
+  --ring: oklch(0.7 0.015 230);
+
+  --accent: oklch(0.72 0.018 230);
+  --accent-foreground: oklch(0.15 0.003 95);
+
+  --card: oklch(0.185 0.003 95);
+  --card-foreground: oklch(0.94 0.002 95);
+
+  --popover: oklch(0.185 0.003 95);
+  --popover-foreground: oklch(0.94 0.002 95);
+
+  --primary: oklch(0.92 0.002 95);
+  --primary-foreground: oklch(0.15 0.003 95);
+
+  --secondary: oklch(0.24 0.003 95);
+  --secondary-foreground: oklch(0.92 0.002 95);
+
+  --destructive: oklch(0.65 0.18 28);
+  --destructive-foreground: oklch(0.99 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv01", "tnum";
+  }
+  /* Always-visible focus ring — required for keyboard-first UX. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 1px;
+    border-radius: 2px;
+  }
+  /* Reduce motion for users who request it. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Thin, restrained scrollbar — works in dark + light. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 2px;
+  }
+}
+
+/* Spinner used in the search input + elsewhere. */
+@keyframes lumen-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Subtle fade-in for results — kept very short. */
+@keyframes lumen-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.lumen-fade-in {
+  animation: lumen-fade-in 140ms ease-out;
+}
+
+.lumen-control { border: 1px solid var(--border); background: var(--background); border-radius: 3px; padding: .45rem .65rem; font-size: .8rem; }
+.lumen-button { border: 1px solid var(--border); padding: .45rem .7rem; border-radius:3px; font-size:.8rem; cursor:pointer; }
+.lumen-button:disabled {opacity:.5;cursor:default;}
+
+.lumen-control { border: 1px solid var(--border); background: var(--background); border-radius: 3px; padding: .45rem .65rem; font-size: .8rem; }
+.lumen-button { border: 1px solid var(--border); padding: .45rem .7rem; border-radius:3px; font-size:.8rem; cursor:pointer; }
+.lumen-button:disabled {opacity:.5;cursor:default;}
