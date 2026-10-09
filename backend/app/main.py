@@ -60,7 +60,7 @@ def create_app(
     )
     outbound = client or httpx.AsyncClient(
         timeout=httpx.Timeout(
-            config.engine_timeout_seconds, connect=min(3, config.engine_timeout_seconds)
+            config.engine_timeout_seconds, connect=min(8, config.engine_timeout_seconds)
         ),
         limits=httpx.Limits(
             max_connections=config.max_outbound_concurrency,

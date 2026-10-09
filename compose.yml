@@ -13,6 +13,7 @@ services:
       LUMEN_QUERY_TIMEOUT_SECONDS: ${LUMEN_QUERY_TIMEOUT_SECONDS:-9}
       LUMEN_MAX_OUTBOUND_CONCURRENCY: ${LUMEN_MAX_OUTBOUND_CONCURRENCY:-12}
       LUMEN_RATE_LIMIT_PER_MINUTE: ${LUMEN_RATE_LIMIT_PER_MINUTE:-120}
+      LUMEN_ENABLE_DDG_HTML: ${LUMEN_ENABLE_DDG_HTML:-0}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
       interval: 30s
