@@ -1,5 +1,4 @@
 from .base import AdapterError, SearchEngine, clean, safe_url
-from .brave import Brave
 from .commons import Commons
 from .crossref import Crossref
 from .duckduckgo import DuckDuckGo
@@ -10,7 +9,6 @@ from .wikipedia import Wikipedia
 
 __all__ = [
     "AdapterError",
-    "Brave",
     "Commons",
     "Crossref",
     "DuckDuckGo",
@@ -28,5 +26,13 @@ __all__ = [
 def create_engines() -> dict[str, SearchEngine]:
     return {
         engine.id: engine
-        for engine in [Wikipedia(), GitHub(), Crossref(), HackerNews(), Commons(), Brave(), DuckDuckGo(), GoogleNews()]
+        for engine in [
+            Wikipedia(),
+            GitHub(),
+            Crossref(),
+            HackerNews(),
+            Commons(),
+            DuckDuckGo(),
+            GoogleNews(),
+        ]
     }

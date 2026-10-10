@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from html.parser import HTMLParser
 from typing import ClassVar
-from urllib.parse import parse_qs, unquote, urljoin, urlsplit
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 import httpx
 
@@ -27,8 +27,12 @@ class _ResultParser(HTMLParser):
         self.current: dict[str, object] | None = None
         self.depth = 0
         self.field: str | None = None
+        self.field_depth = 0
+        self.hidden = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"script", "style"}:
+            self.hidden += 1
         attributes = dict(attrs)
         classes = set((attributes.get("class") or "").split())
         if tag == "div":
@@ -39,21 +43,29 @@ class _ResultParser(HTMLParser):
                 self.depth = 1
         if self.current is None:
             return
+        if self.field is not None and tag not in {"br", "img", "hr", "input", "meta", "link"}:
+            self.field_depth += 1
         if tag == "a" and "result__a" in classes:
             self.current["url"] = attributes.get("href") or ""
             self.field = "title"
-        elif tag == "a" and "result__snippet" in classes:
+            self.field_depth = 1
+        elif "result__snippet" in classes:
             self.field = "snippet"
+            self.field_depth = 1
 
     def handle_data(self, data: str) -> None:
-        if self.current is not None and self.field:
+        if self.current is not None and self.field and not self.hidden:
             parts = self.current[self.field]
             if isinstance(parts, list):
                 parts.append(data)
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "a":
-            self.field = None
+        if tag in {"script", "style"}:
+            self.hidden = max(0, self.hidden - 1)
+        if self.field is not None:
+            self.field_depth -= 1
+            if self.field_depth <= 0:
+                self.field = None
         if tag == "div" and self.current is not None:
             self.depth -= 1
             if self.depth == 0:
@@ -68,13 +80,20 @@ class _ResultParser(HTMLParser):
 
 def _destination(href: str) -> str | None:
     """Resolve a public result link, including DDG's ordinary outbound redirect URL."""
-    url = urljoin("https://html.duckduckgo.com/", href)
-    parsed = urlsplit(url)
-    if parsed.hostname in {"duckduckgo.com", "www.duckduckgo.com", "html.duckduckgo.com"} and parsed.path.startswith("/l/"):
+    try:
+        url = urljoin("https://html.duckduckgo.com/", href)
+        parsed = urlsplit(url)
+    except ValueError:
+        return None
+    if parsed.hostname in {
+        "duckduckgo.com",
+        "www.duckduckgo.com",
+        "html.duckduckgo.com",
+    } and parsed.path.startswith("/l/"):
         candidate = parse_qs(parsed.query).get("uddg", [])
         if not candidate:
             return None
-        url = unquote(candidate[0])
+        url = candidate[0]
     return safe_url(url)
 
 
@@ -84,6 +103,10 @@ class DuckDuckGo(SearchEngine):
     categories: ClassVar[list[str]] = ["general"]
     filters: ClassVar[list[str]] = ["time_range"]
     rate_limit_per_minute = 6
+    pagination = False
+    interface_type = "experimental_html"
+    timeout_seconds = 8.0
+    access_note = "Unofficial HTML; disabled by default. Check permitted use before enabling."
 
     @property
     def enabled(self) -> bool:  # type: ignore[override]
@@ -99,7 +122,10 @@ class DuckDuckGo(SearchEngine):
             form["df"] = date
         # No forged browser fingerprint and no challenge-solving code.
         async with client.stream(
-            "POST", "https://html.duckduckgo.com/html/", data=form, follow_redirects=False,
+            "POST",
+            "https://html.duckduckgo.com/html/",
+            data=form,
+            follow_redirects=False,
             headers={"Accept": "text/html"},
         ) as response:
             if response.status_code == 429:
@@ -107,9 +133,16 @@ class DuckDuckGo(SearchEngine):
                     "DuckDuckGo rate limited this instance",
                     retry_after=retry_after(response.headers.get("Retry-After"), 120),
                 )
+            if response.status_code == 202:
+                raise AdapterError(
+                    "DuckDuckGo presented a challenge or deferred access",
+                    retry_after=600,
+                    status="unavailable",
+                )
             if response.status_code == 403:
-                raise AdapterError("DuckDuckGo denied automated access", retry_after=600,
-                                   status="unavailable")
+                raise AdapterError(
+                    "DuckDuckGo denied automated access", retry_after=600, status="unavailable"
+                )
             if response.status_code != 200:
                 raise AdapterError("DuckDuckGo HTML search unavailable", status="unavailable")
             body = bytearray()
@@ -118,21 +151,37 @@ class DuckDuckGo(SearchEngine):
                     raise AdapterError("DuckDuckGo response exceeded size limit")
                 body.extend(chunk)
         page = body.decode("utf-8", errors="replace")
-        if "challenge-form" in page or "anomaly-modal" in page:
-            raise AdapterError("DuckDuckGo presented a challenge", retry_after=600,
-                               status="unavailable")
+        if any(
+            marker in page.lower()
+            for marker in (
+                "challenge-form",
+                "anomaly-modal",
+                "anomaly.js",
+                "bots use duckduckgo",
+            )
+        ):
+            raise AdapterError(
+                "DuckDuckGo presented a challenge", retry_after=600, status="unavailable"
+            )
         parser = _ResultParser()
         parser.feed(page)
         if not parser.results:
-            if "no results" in page.lower():
+            if "no-results" in page.lower() or "result--no-result" in page.lower():
                 return []
-            raise AdapterError("DuckDuckGo HTML structure changed or access was blocked",
-                               status="unavailable")
+            raise AdapterError(
+                "DuckDuckGo HTML structure changed or access was blocked", status="unavailable"
+            )
         found: list[SearchResult] = []
-        for title, href, snippet in parser.results[: query.limit]:
+        seen: set[str] = set()
+        for title, href, snippet in parser.results:
             url = _destination(href)
             if url:
                 result = self.result(title, url, snippet)
-                if result:
+                if result and result.url not in seen:
+                    seen.add(result.url)
                     found.append(result)
+                    if len(found) >= query.limit:
+                        break
+        if not found:
+            raise AdapterError("DuckDuckGo returned no valid result links", status="unavailable")
         return found

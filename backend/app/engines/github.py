@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 import httpx
 
 from app.models import SearchQuery, SearchResult
@@ -11,13 +9,11 @@ from .base import SearchEngine, _dict, _list, clean, parse_date
 
 class GitHub(SearchEngine):
     id, name, categories = "github", "GitHub repositories", ["developer", "general"]
-    rate_limit_per_minute = 10
+    rate_limit_per_minute = 6
+    access_note = "Public repository search; unauthenticated search limits apply."
 
     async def search(self, query: SearchQuery, client: httpx.AsyncClient) -> list[SearchResult]:
         headers = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
-        token = os.environ.get("GITHUB_TOKEN")
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
         data = await self.get(
             client,
             "https://api.github.com/search/repositories",

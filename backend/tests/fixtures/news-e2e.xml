@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Test news feed</title><item><title>Linux kernel release - Example News</title><link>https://news.google.com/rss/articles/test-linux</link><description>&lt;p&gt;A fixture article about Linux kernel development.&lt;/p&gt;</description><pubDate>Fri, 09 Oct 2026 08:00:00 GMT</pubDate><source url="https://example.com">Example News</source></item></channel></rss>

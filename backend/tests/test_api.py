@@ -4,6 +4,70 @@ from app.main import create_app
 from tests.test_core import Engine
 
 
+def signed_identity(identity, secret, timestamp=None):
+    import hashlib
+    import hmac
+    import time
+
+    timestamp = str(int(time.time()) if timestamp is None else timestamp)
+    signature = hmac.new(
+        secret.encode(), f"request:{identity}:{timestamp}".encode(), hashlib.sha256
+    ).hexdigest()
+    return {"X-Lumen-Identity": f"{identity}.{timestamp}.{signature}"}
+
+
+def test_signed_proxy_sessions_have_separate_limits(monkeypatch):
+    secret = "s" * 32
+    monkeypatch.setenv("LUMEN_PROXY_SECRET", secret)
+    monkeypatch.setenv("LUMEN_RATE_LIMIT_PER_MINUTE", "2")
+    with TestClient(create_app(engines={"fake": Engine()})) as client:
+        first = signed_identity("a" * 32, secret)
+        second = signed_identity("b" * 32, secret)
+        for _ in range(2):
+            assert client.get("/api/v1/search?q=python", headers=first).status_code == 200
+        assert client.get("/api/v1/search?q=python", headers=first).status_code == 429
+        assert client.get("/api/v1/search?q=python", headers=second).status_code == 200
+
+
+def test_forged_and_expired_proxy_identity_cannot_rotate_limit(monkeypatch):
+    import time
+
+    secret = "s" * 32
+    monkeypatch.setenv("LUMEN_PROXY_SECRET", secret)
+    monkeypatch.setenv("LUMEN_RATE_LIMIT_PER_MINUTE", "2")
+    with TestClient(create_app(engines={"fake": Engine()})) as client:
+        forged = signed_identity("a" * 32, "wrong")
+        expired = signed_identity("b" * 32, secret, int(time.time()) - 120)
+        assert client.get("/api/v1/search?q=python", headers=forged).status_code == 200
+        assert client.get("/api/v1/search?q=python", headers=expired).status_code == 200
+        assert (
+            client.get(
+                "/api/v1/search?q=python", headers={"X-Forwarded-For": "203.0.113.2"}
+            ).status_code
+            == 429
+        )
+
+
+def test_fresh_sessions_cannot_bypass_aggregate_proxy_ceiling(monkeypatch):
+    secret = "s" * 32
+    monkeypatch.setenv("LUMEN_PROXY_SECRET", secret)
+    monkeypatch.setenv("LUMEN_PROXY_PEER_RATE_LIMIT_PER_MINUTE", "2")
+    with TestClient(create_app(engines={"fake": Engine()})) as client:
+        for identity in ["a" * 32, "b" * 32]:
+            assert (
+                client.get(
+                    "/api/v1/search?q=python", headers=signed_identity(identity, secret)
+                ).status_code
+                == 200
+            )
+        assert (
+            client.get(
+                "/api/v1/search?q=python", headers=signed_identity("c" * 32, secret)
+            ).status_code
+            == 429
+        )
+
+
 def test_routes_and_privacy():
     with TestClient(create_app(engines={"fake": Engine()}, diagnostics_token="secret")) as client:
         assert client.get("/api/v1/health").status_code == 200

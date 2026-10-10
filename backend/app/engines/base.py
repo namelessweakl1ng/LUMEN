@@ -111,6 +111,10 @@ def retry_after(value: str | None, default: float) -> float:
 
 
 class SearchEngine:
+    pagination = True
+    interface_type = "public_api"
+    access_note = "Public unauthenticated interface; provider limits and terms apply."
+    timeout_seconds: float | None = None
     requires_auth = False
     configured = True
     enabled = True
