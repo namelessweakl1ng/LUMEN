@@ -62,6 +62,11 @@ export interface Engine {
   enabled: boolean;
   filters: string[];
   rate_limit_per_minute: number;
+  pagination?: boolean;
+  interface_type?: "public_api" | "rss" | "experimental_html";
+  access_note?: string;
+  timeout_seconds?: number;
+  availability?: string;
 }
 export interface Category {
   id: SearchCategory;

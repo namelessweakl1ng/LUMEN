@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { SearchScreen } from "@/features/search/search-screen";
-export default function HomePage() {
+export default function SearchPage() {
   return (
     <Suspense
       fallback={
@@ -9,7 +9,7 @@ export default function HomePage() {
         </main>
       }
     >
-      <SearchScreen landing />
+      <SearchScreen />
     </Suspense>
   );
 }

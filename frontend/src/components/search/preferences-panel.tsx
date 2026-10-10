@@ -171,11 +171,11 @@ export function PreferencesPanel({
         {section === "About" && (
           <>
             <p>
-              Lumen V2 · independent metasearch and local research workspace.
+              Lumen V3 · independent metasearch and local research workspace.
             </p>
             <p>
               Wikipedia, GitHub, Crossref, Hacker News and Wikimedia Commons.
-              Optional web search requires backend Brave credentials.
+              Google News RSS provides news coverage. Experimental HTML sources may be unavailable.
               Unsupported categories stay disabled.
             </p>
             <p>

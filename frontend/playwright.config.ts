@@ -31,12 +31,14 @@ export default defineConfig({
       url: "http://127.0.0.1:8000/api/v1/health",
       reuseExistingServer: false,
       timeout: 120_000,
+      env: { LUMEN_PROXY_SECRET: "test-only-internal-proxy-secret-32chars" },
     },
     {
       command: "bun run dev",
       env: {
         LUMEN_BACKEND_URL: "http://127.0.0.1:8000",
         NEXT_TELEMETRY_DISABLED: "1",
+        LUMEN_PROXY_SECRET: "test-only-internal-proxy-secret-32chars",
       },
       url: "http://127.0.0.1:3000",
       reuseExistingServer: false,

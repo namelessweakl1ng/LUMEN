@@ -7,6 +7,19 @@ afterEach(() => {
 });
 const context = (...path: string[]) => ({ params: Promise.resolve({ path }) });
 describe("fixed backend boundary", () => {
+  it("replaces supplied identity headers with a signed browser session", async () => {
+    vi.stubEnv("LUMEN_PROXY_SECRET", "s".repeat(32));
+    const fetch = vi.fn().mockResolvedValue(new Response("{}"));
+    vi.stubGlobal("fetch", fetch);
+    const response = await GET(new NextRequest("http://frontend/api/v1/search?q=python", {
+      headers: { "X-Lumen-Identity": "forged", "X-Forwarded-For": "203.0.113.1" },
+    }), context("search"));
+    const headers = fetch.mock.calls[0][1].headers;
+    expect(headers["X-Lumen-Identity"]).toMatch(/^[a-f0-9]{32}\.\d+\.[a-f0-9]{64}$/);
+    expect(headers["X-Forwarded-For"]).toBeUndefined();
+    expect(response.headers.get("Set-Cookie")).toContain("HttpOnly");
+    expect(response.headers.get("Set-Cookie")).toContain("SameSite=lax");
+  });
   it("rejects unknown destinations and wrong method without an outbound request", async () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);

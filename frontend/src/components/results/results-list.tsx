@@ -7,6 +7,7 @@ export function ResultsList({
   query,
   showImages,
   openInNewTab,
+  sharedUrls,
 }: {
   data?: SearchResponse;
   loading: boolean;
@@ -14,6 +15,7 @@ export function ResultsList({
   query: string;
   showImages?: boolean;
   openInNewTab?: boolean;
+  sharedUrls?: string[];
 }) {
   if (loading)
     return (
@@ -30,15 +32,22 @@ export function ResultsList({
   if (!data) return null;
   return (
     <section aria-label="Search results">
-      <p role="status" className="py-4 text-xs text-muted-foreground">
-        {data.result_count} returned results · {Math.round(data.timing_ms)} ms
+      <p role="status" className="results-status">
+        {data.result_count} results · {(data.timing_ms / 1000).toFixed(2)} s ·{" "}
+        {data.engine_status
+          .filter((s) => s.status === "success")
+          .map((s) => s.engine)
+          .join(" · ")}
         {data.cached ? " · cached" : ""}
-        {data.partial ? " · partial results" : ""}
       </p>
-      <details className="text-xs">
-        <summary className="cursor-pointer">
-          Source status and applied filters
-        </summary>
+      {data.partial && (
+        <p className="notice mb-4">
+          Some sources could not respond. Results from available sources are
+          shown.
+        </p>
+      )}
+      <details className="text-xs text-muted-foreground mb-2">
+        <summary className="cursor-pointer">Search diagnostics</summary>
         <ul className="my-2 space-y-1">
           {data.engine_status.map((s) => (
             <li key={s.engine}>
@@ -63,13 +72,21 @@ export function ResultsList({
           }
         >
           {data.results.map((r) => (
-            <ResultItem
-              key={r.id}
-              result={r}
-              query={query}
-              showImages={showImages}
-              openInNewTab={openInNewTab}
-            />
+            <div key={r.id}>
+              {sharedUrls && (
+                <p className="eyebrow mt-5">
+                  {sharedUrls.includes(r.url) || sharedUrls.includes(r.id)
+                    ? "Shared result"
+                    : "Unique to this profile"}
+                </p>
+              )}
+              <ResultItem
+                result={r}
+                query={query}
+                showImages={showImages}
+                openInNewTab={openInNewTab}
+              />
+            </div>
           ))}
         </div>
       ) : (

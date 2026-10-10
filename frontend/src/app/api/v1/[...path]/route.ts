@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE, sessionIdentity } from "@/lib/search/proxy-identity";
 export const dynamic = "force-dynamic";
 const paths = new Set([
   "health",
@@ -65,10 +66,14 @@ async function forward(
       request.method === "POST"
         ? await boundedText(request.body, 65536)
         : undefined;
+    const secret = process.env.LUMEN_PROXY_SECRET;
+    if (secret && secret.length < 32) throw new Error("Invalid proxy configuration");
+    const session = secret ? sessionIdentity(request.cookies.get(SESSION_COOKIE)?.value, secret) : null;
     const response = await fetch(target, {
       method: request.method,
       headers: {
         Accept: "application/json",
+        ...(session ? { "X-Lumen-Identity": session.header } : {}),
         ...(request.method === "POST"
           ? { "Content-Type": "application/json" }
           : {}),
@@ -78,7 +83,7 @@ async function forward(
       cache: "no-store",
       redirect: "error",
     });
-    return new NextResponse(await boundedText(response.body, 8 * 1024 * 1024), {
+    const result = new NextResponse(await boundedText(response.body, 8 * 1024 * 1024), {
       status: response.status,
       headers: {
         "Content-Type": "application/json",
@@ -89,6 +94,11 @@ async function forward(
           : {}),
       },
     });
+    if (session?.fresh && path.startsWith("search")) result.cookies.set(SESSION_COOKIE, session.value, {
+      httpOnly: true, sameSite: "lax", secure: process.env.LUMEN_SECURE_COOKIES === "1" || request.nextUrl.protocol === "https:",
+      path: "/", maxAge: session.maxAge,
+    });
+    return result;
   } catch (error) {
     if (error instanceof RangeError && request.method === "POST")
       return NextResponse.json(
