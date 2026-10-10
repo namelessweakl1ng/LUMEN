@@ -30,24 +30,10 @@ export function ResultItem({
   const licenseUrl = parseUrl(metadata.license_url),
     discussion = parseUrl(metadata.discussion_url);
   return (
-    <article className="border-b py-5" data-testid="search-result">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="font-mono">{result.domain}</span>
-        <span>via {result.source_engines.join(", ")}</span>
-        <span className="ml-auto">#{result.rank}</span>
-        <SaveResultButton result={result} query={query} />
-        <button
-          className="lumen-button"
-          onClick={() => {
-            navigator.clipboard
-              .writeText(result.url)
-              .then(() => setCopied(true))
-              .catch(() => setCopied(false));
-          }}
-          aria-label={`Copy URL for ${result.title}`}
-        >
-          {copied ? "Copied" : "Copy"}
-        </button>
+    <article className="result-item" data-testid="search-result">
+      <div className="result-domain">
+        <span>{result.domain}</span>
+        <span className="ml-3">{result.source_engines.join(" · ")}</span>
       </div>
       {/* External thumbnails are opt-in to preserve browser privacy. */}
       {/* eslint-disable @next/next/no-img-element */}
@@ -69,7 +55,7 @@ export function ResultItem({
           )}
         </div>
       )}
-      <h3 className="mt-2 text-lg font-medium">
+      <h3 className="mt-2 result-title">
         {url ? (
           <a
             href={url.href}
@@ -83,16 +69,13 @@ export function ResultItem({
           result.title
         )}
       </h3>
-      <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-        {result.url}
-      </p>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        {result.snippet}
-      </p>
+      <p className="result-url">{result.url}</p>
+      <p className="result-snippet">{result.snippet}</p>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {typeof metadata.stars === "number" && (
           <span>★ {metadata.stars.toLocaleString()} stars</span>
         )}
+        {text(metadata.publisher) && <span>{text(metadata.publisher)}</span>}
         {text(metadata.language) && <span>{text(metadata.language)}</span>}
         {text(metadata.authors) && (
           <span>Authors: {text(metadata.authors)}</span>
@@ -139,10 +122,35 @@ export function ResultItem({
           {text(metadata.credit) && ` · ${text(metadata.credit)}`}
         </p>
       )}
+      <div className="result-actions">
+        <SaveResultButton result={result} query={query} />
+        <button
+          className="lumen-button"
+          aria-label={`Copy URL for ${result.title}`}
+          onClick={() => {
+            navigator.clipboard
+              .writeText(result.url)
+              .then(() => setCopied(true))
+              .catch(() => setCopied(false));
+          }}
+        >
+          {copied ? "Copied" : "Copy URL"}
+        </button>
+        <span className="text-xs text-muted-foreground">
+          {result.category === "science"
+            ? "Research paper"
+            : result.category === "news"
+              ? "News article"
+              : result.category === "images"
+                ? "Image"
+                : ""}
+        </span>
+      </div>
       <details className="mt-3 text-xs text-muted-foreground">
-        <summary className="cursor-pointer">
-          Why this result? · score {result.score.toFixed(3)}
-        </summary>
+        <summary className="cursor-pointer">Source & ranking details</summary>
+        <p className="mt-2">
+          Provided by {result.source_engines.join(", ")} · rank {result.rank}
+        </p>
         <Ranking explanation={result.ranking_explanation} />
       </details>
     </article>

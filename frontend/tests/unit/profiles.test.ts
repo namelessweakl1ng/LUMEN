@@ -3,6 +3,7 @@ import {
   BUILTINS,
   validateProfiles,
   profileParams,
+  comparisonParams,
 } from "../../src/lib/search/profiles";
 import { searchUrl } from "../../src/lib/search/client";
 describe("local search profiles", () => {
@@ -68,4 +69,22 @@ it("migrates existing new-tab preference without enabling external thumbnails", 
   expect(
     readPreferences({ showImages: "true", openInNewTab: "false" }, null),
   ).toEqual({ showImages: false, openInNewTab: true });
+});
+
+it("converts local profiles to exact backend comparison filters", () => {
+  const request = comparisonParams({
+    ...BUILTINS[0],
+    id: "custom",
+    name: "Stored profile",
+    site: " example.org , wikipedia.org ",
+    exclude_site: "noise.org",
+    preferred_domains: " docs.org ",
+    file_type: "",
+  });
+  expect(request.site).toEqual(["example.org", "wikipedia.org"]);
+  expect(request.exclude_site).toEqual(["noise.org"]);
+  expect(request.preferred_domains).toEqual(["docs.org"]);
+  expect(request.file_type).toBeNull();
+  expect(request).not.toHaveProperty("id");
+  expect(request).not.toHaveProperty("name");
 });

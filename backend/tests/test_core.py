@@ -170,6 +170,48 @@ async def test_unavailable_backoff_keeps_unavailable_status():
         assert service.engine_metrics["fake"]["unavailable"] == 2
 
 
+async def test_identical_concurrent_searches_share_work_and_cancel_independently():
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    class Waiting(Engine):
+        async def search(self, query, client):
+            self.calls += 1
+            entered.set()
+            await release.wait()
+            return [SearchResult(title="Python", url="https://python.org/")]
+
+    async with httpx.AsyncClient() as client:
+        engine = Waiting()
+        service = SearchService({"fake": engine}, client)
+        query = SearchQuery(q="python")
+        first = asyncio.create_task(service.search(query))
+        await entered.wait()
+        second = asyncio.create_task(service.search(query))
+        await asyncio.sleep(0)
+        first.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await first
+        assert not second.done()
+        release.set()
+        assert (await second).results[0].title == "Python"
+        assert engine.calls == 1
+        assert not service.inflight
+        assert service.metrics["coalesced_requests"] == 1
+
+
+async def test_source_specific_deadline_is_bounded_by_overall_engine_budget():
+    class Slow(Engine):
+        timeout_seconds = 0.01
+
+        async def search(self, query, client):
+            await asyncio.sleep(1)
+            return []
+
+    async with httpx.AsyncClient() as client:
+        service = SearchService({"fake": Slow()}, client, timeout=0.5)
+        assert (await service.search(SearchQuery(q="python"))).engine_status[0].status == "timeout"
+
+
 def test_repeated_query_values_preserve_order():
     assert canonical_url("https://example.com/?z=2&z=1") != canonical_url(
         "https://example.com/?z=1&z=2"
@@ -289,40 +331,24 @@ def test_recency_ranking_uses_one_injectable_clock():
     ] == 1 / (1 + 1 / 30)
 
 
-async def test_upstream_freshness_keeps_undated_brave_results(monkeypatch):
-    from app.engines.brave import Brave
-    from app.engines.wikipedia import Wikipedia
+async def test_upstream_freshness_keeps_undated_results():
+    class Fresh(Engine):
+        filters: ClassVar[list[str]] = ["time_range"]
 
-    monkeypatch.setenv("BRAVE_API_KEY", "fixture-not-real")
+        async def search(self, query, client):
+            return [SearchResult(title="Fresh Python", url="https://python.org/fresh")]
 
-    def upstream(request):
-        if request.url.host == "api.search.brave.com":
-            assert request.url.params["freshness"] == "pd"
-            return httpx.Response(
-                200,
-                json={
-                    "web": {
-                        "results": [
-                            {
-                                "title": "Fresh Python",
-                                "url": "https://python.org/fresh",
-                                "description": "Recent",
-                            }
-                        ]
-                    }
-                },
-            )
-        return httpx.Response(
-            200, json={"query": {"search": [{"title": "Python", "snippet": "Undated"}]}}
-        )
+    class Undated(Engine):
+        async def search(self, query, client):
+            return [SearchResult(title="Python", url="https://example.com/undated")]
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(upstream)) as client:
-        response = await SearchService({"brave": Brave(), "wikipedia": Wikipedia()}, client).search(
+    async with httpx.AsyncClient() as client:
+        response = await SearchService({"fresh": Fresh(), "undated": Undated()}, client).search(
             SearchQuery(q="python", time_range="day")
         )
         assert [item.url for item in response.results] == ["https://python.org/fresh"]
-        assert response.applied_filters["upstream"]["brave"]["time_range"] == "day"
-        assert response.applied_filters["local"]["time_range_sources"] == ["wikipedia"]
+        assert response.applied_filters["upstream"]["fresh"]["time_range"] == "day"
+        assert response.applied_filters["local"]["time_range_sources"] == ["undated"]
 
 
 async def test_result_count_counts_returned_page_not_candidate_pool():

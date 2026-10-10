@@ -23,13 +23,19 @@ export function useKeyboardShortcut(
   }, [handler]);
 
   React.useEffect(() => {
-    const parts = combo.toLowerCase().split("+").map((s) => s.trim());
+    const parts = combo
+      .toLowerCase()
+      .split("+")
+      .map((s) => s.trim());
     const key = parts[parts.length - 1];
-    const wantMod = parts.includes("mod") || parts.includes("ctrl") || parts.includes("cmd");
+    const wantMod =
+      parts.includes("mod") || parts.includes("ctrl") || parts.includes("cmd");
     const wantShift = parts.includes("shift");
     const wantAlt = parts.includes("alt");
 
     const onKey = (e: KeyboardEvent) => {
+      // Modal dialogs own keyboard focus and native Escape dismissal.
+      if (e.defaultPrevented || document.querySelector("dialog[open]")) return;
       // Respect typing context.
       const target = e.target as HTMLElement | null;
       const isTyping =
@@ -42,7 +48,13 @@ export function useKeyboardShortcut(
 
       // Special case: "/" alone — must not be combined with modifier.
       if (key === "/" && !wantMod && !wantShift && !wantAlt) {
-        if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        if (
+          e.key === "/" &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          !e.shiftKey
+        ) {
           e.preventDefault();
           handlerRef.current(e);
         }

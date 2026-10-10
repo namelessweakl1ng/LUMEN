@@ -27,7 +27,7 @@ export const BUILTINS: Profile[] = [
   {
     ...base,
     id: "balanced",
-    name: "Balanced",
+    name: "General",
     category: "general",
     engines: [],
   },
@@ -50,7 +50,7 @@ export const BUILTINS: Profile[] = [
     id: "news",
     name: "News",
     category: "news",
-    engines: ["hackernews"],
+    engines: ["google_news", "hackernews"],
     ranking: "recency",
   },
 ];
@@ -120,4 +120,26 @@ export function profileParams(
   }
   out.delete("page");
   return out;
+}
+
+export function comparisonParams(profile: Profile) {
+  const { id: _id, name: _name, ...params } = profile;
+  void _id;
+  void _name;
+  return {
+    ...params,
+    site: params.site
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    exclude_site: params.exclude_site
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    preferred_domains: params.preferred_domains
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    file_type: params.file_type || null,
+  };
 }

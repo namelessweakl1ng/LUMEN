@@ -13,6 +13,7 @@ class Configuration(BaseModel):
     query_timeout_seconds: float = Field(default=9, ge=0.1, le=120)
     max_outbound_concurrency: int = Field(default=12, ge=1, le=128)
     rate_limit_per_minute: int = Field(default=120, ge=1, le=10000)
+    proxy_peer_rate_limit_per_minute: int = Field(default=2400, ge=1, le=100000)
 
     @classmethod
     def from_environment(cls) -> "Configuration":

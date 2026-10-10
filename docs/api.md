@@ -20,3 +20,5 @@ A default category with no configured eligible source returns HTTP 422 (`No conf
 Comparison accepts `{ "q": "python", "left": { "engines": ["github"] }, "right": { "engines": ["hackernews"] } }`. Shared and unique canonical URLs and overlap are calculated from returned data. Latency and overlap do not establish objective source quality.
 
 Diagnostics are disabled without an operator-configured token. Keep backend port 8000 private; the supplied Compose stack publishes only the frontend. Use `Authorization: Bearer <token>` for diagnostics; missing configuration returns 404. Consult OpenAPI for exact validation failures.
+
+The same-origin frontend signs random browser session identities using the internal shared secret. The backend verifies them for per-session limits and also limits aggregate authenticated proxy-peer traffic. Unsigned direct requests use peer limits; arbitrary forwarded headers are ignored. Rate-limited responses return HTTP 429. See [deployment](deployment.md) for shared-secret and secure-cookie configuration.

@@ -1,40 +1,48 @@
 {
-  "mode": "live official provider APIs, one request per configured source",
+  "observed_date": "2026-10-10",
+  "mode": "live provider APIs/feeds; one request per enabled source",
   "sources": [
     {
       "engine": "wikipedia",
       "status": "success",
       "results": 3,
-      "latency_ms": 549.363
+      "latency_ms": 955.258
     },
     {
       "engine": "github",
       "status": "success",
       "results": 3,
-      "latency_ms": 779.985
+      "latency_ms": 779.793
     },
     {
       "engine": "crossref",
       "status": "success",
       "results": 3,
-      "latency_ms": 453.015
+      "latency_ms": 511.323
     },
     {
       "engine": "hackernews",
       "status": "success",
       "results": 3,
-      "latency_ms": 458.958
+      "latency_ms": 508.371
     },
     {
       "engine": "commons",
       "status": "success",
       "results": 3,
-      "latency_ms": 906.992
+      "latency_ms": 825.44
     },
     {
-      "engine": "brave",
-      "status": "unconfigured",
+      "engine": "google_news",
+      "status": "success",
+      "results": 3,
+      "latency_ms": 987.146
+    },
+    {
+      "engine": "duckduckgo",
+      "status": "disabled",
       "results": 0
     }
-  ]
+  ],
+  "policy_review_note": "Observed before Google News access-policy review. Google News RSS was subsequently disabled by default pending documented permission; response success is not permission evidence."
 }

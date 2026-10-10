@@ -1,4 +1,4 @@
-name: LUMEN V2 CI
+name: LUMEN V3 CI
 on:
   push:
   pull_request:
@@ -56,5 +56,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: python tools/configure.py
       - run: docker compose config --quiet
       - run: docker compose build

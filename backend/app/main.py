@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from app.core.configuration import Configuration
+from app.core.identity import proxy_identity
 from app.core.search import SearchService
 from app.models import CompareRequest, SearchQuery, SearchResponse
 
@@ -51,6 +52,9 @@ def create_app(
     diagnostics_token: str | None = None,
 ) -> FastAPI:
     config = Configuration.from_environment()
+    proxy_secret = os.getenv("LUMEN_PROXY_SECRET") or None
+    if proxy_secret and len(proxy_secret) < 32:
+        raise ValueError("LUMEN_PROXY_SECRET must contain at least 32 characters")
     if engines is None:
         from app.engines import create_engines
 
@@ -60,14 +64,14 @@ def create_app(
     )
     outbound = client or httpx.AsyncClient(
         timeout=httpx.Timeout(
-            config.engine_timeout_seconds, connect=min(3, config.engine_timeout_seconds)
+            config.engine_timeout_seconds, connect=min(8, config.engine_timeout_seconds)
         ),
         limits=httpx.Limits(
             max_connections=config.max_outbound_concurrency,
             max_keepalive_connections=config.max_outbound_concurrency,
         ),
         follow_redirects=False,
-        headers={"User-Agent": "LUMEN/2.0 (privacy-first metasearch)"},
+        headers={"User-Agent": "LUMEN/3.0 (privacy-first metasearch)"},
     )
     service = SearchService(
         engines,
@@ -86,7 +90,7 @@ def create_app(
         if client is None:
             await outbound.aclose()
 
-    application = FastAPI(title="LUMEN", version="2.0.0", lifespan=lifespan)
+    application = FastAPI(title="LUMEN", version="3.0.0", lifespan=lifespan)
     application.state.search_service = service
 
     @application.exception_handler(RequestValidationError)
@@ -105,27 +109,38 @@ def create_app(
     @application.middleware("http")
     async def privacy_and_limits(request: Request, call_next):
         if request.url.path.startswith("/api/v1/search"):
-            # Forwarded headers are untrusted. An IP digest lives in memory for one minute only.
+            # Only a signed frontend session can identify separate browsers. No IP headers trusted.
             now = time.monotonic()
             for old in list(clients):
                 if not clients[old] or clients[old][-1] <= now - 60:
                     del clients[old]
             address = request.client.host if request.client else "unknown"
-            identity = hashlib.sha256(address.encode()).hexdigest()
-            history = clients.setdefault(identity, deque())
-            clients.move_to_end(identity)
-            while history and history[0] <= now - 60:
-                history.popleft()
-            if len(history) >= config.rate_limit_per_minute:
-                return JSONResponse(
-                    status_code=429,
-                    content={"detail": "Request limit exceeded"},
-                    headers={
-                        "Retry-After": str(max(1, int(60 - (now - history[0])))),
-                        "Cache-Control": "no-store",
-                    },
-                )
-            history.append(now)
+            peer = hashlib.sha256(address.encode()).hexdigest()
+            session = proxy_identity(request.headers.get("X-Lumen-Identity"), proxy_secret)
+            budgets = [("peer:" + peer, config.rate_limit_per_minute)]
+            if session:
+                budgets = [
+                    ("peer:" + peer, config.proxy_peer_rate_limit_per_minute),
+                    ("session:" + session, config.rate_limit_per_minute),
+                ]
+            histories = []
+            for identity, limit in budgets:
+                history = clients.setdefault(identity, deque())
+                clients.move_to_end(identity)
+                while history and history[0] <= now - 60:
+                    history.popleft()
+                if len(history) >= limit:
+                    return JSONResponse(
+                        status_code=429,
+                        content={"detail": "Request limit exceeded"},
+                        headers={
+                            "Retry-After": str(max(1, int(60 - (now - history[0])))),
+                            "Cache-Control": "no-store",
+                        },
+                    )
+                histories.append(history)
+            for history in histories:
+                history.append(now)
             while len(clients) > 4096:
                 clients.popitem(last=False)
         response = await call_next(request)
@@ -136,7 +151,7 @@ def create_app(
 
     @application.get("/api/v1/health")
     async def health():
-        return {"status": "ok", "version": "2.0.0"}
+        return {"status": "ok", "version": "3.0.0"}
 
     @application.get("/api/v1/engines")
     async def engine_metadata():
@@ -151,6 +166,11 @@ def create_app(
                     "enabled": engine.enabled,
                     "filters": engine.filters,
                     "rate_limit_per_minute": engine.rate_limit_per_minute,
+                    "pagination": getattr(engine, "pagination", True),
+                    "interface_type": getattr(engine, "interface_type", "public_api"),
+                    "access_note": getattr(engine, "access_note", ""),
+                    "timeout_seconds": getattr(engine, "timeout_seconds", None),
+                    "availability": service.availability(name),
                 }
                 for name, engine in service.engines.items()
             ]

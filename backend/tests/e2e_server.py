@@ -6,6 +6,7 @@ No runtime environment flag can enable this harness in the production applicatio
 
 import asyncio
 import json
+import os
 from pathlib import Path
 
 import httpx
@@ -20,6 +21,7 @@ HOST_SOURCE = {
     "api.crossref.org": "crossref",
     "hn.algolia.com": "hackernews",
     "commons.wikimedia.org": "commons",
+    "news.google.com": "google_news",
 }
 
 
@@ -39,6 +41,13 @@ async def fixture_transport(request: httpx.Request) -> httpx.Response:
     await asyncio.sleep(0.015)
     if query == "provider-failure" or (query == "partial-failure" and source == "github"):
         return httpx.Response(503, json={"error": "Test fixture failure"})
+    if source == "google_news":
+        content = (
+            b"<rss><channel /></rss>"
+            if query == "no-results"
+            else (Path(__file__).parent / "fixtures/news-e2e.xml").read_bytes()
+        )
+        return httpx.Response(200, content=content, headers={"Content-Type": "application/rss+xml"})
     if query == "no-results":
         empty = {
             "wikipedia": {"query": {"search": []}},
@@ -51,5 +60,7 @@ async def fixture_transport(request: httpx.Request) -> httpx.Response:
     return httpx.Response(200, json=FIXTURES[source])
 
 
+# This isolated harness contacts no provider; exercise the retained RSS parser.
+os.environ["LUMEN_ENABLE_GOOGLE_NEWS_RSS"] = "1"
 client = httpx.AsyncClient(transport=httpx.MockTransport(fixture_transport))
 app = create_app(engines=create_engines(), client=client, diagnostics_token="fixture-only")

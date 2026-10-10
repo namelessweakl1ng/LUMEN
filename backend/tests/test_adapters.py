@@ -3,7 +3,6 @@ import pytest
 
 from app.engines.sources import (
     AdapterError,
-    Brave,
     Commons,
     Crossref,
     GitHub,
@@ -76,24 +75,12 @@ CASES = [
         },
         "commons.wikimedia.org",
     ),
-    (
-        Brave,
-        {
-            "web": {
-                "results": [
-                    {"title": "Python", "url": "https://python.org", "description": "<b>Python</b>"}
-                ]
-            }
-        },
-        "python.org",
-    ),
 ]
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("factory,payload,host", CASES)
 async def test_official_source_normalization(factory, payload, host, monkeypatch):
-    monkeypatch.setenv("BRAVE_API_KEY", "test-only")
     requests = []
 
     def handler(request):
@@ -129,7 +116,6 @@ async def test_official_source_normalization(factory, payload, host, monkeypatch
     ],
 )
 async def test_empty_and_malformed_items(factory, payload, host, payload_override, monkeypatch):
-    monkeypatch.setenv("BRAVE_API_KEY", "test-only")
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload_override))
     ) as client:
@@ -139,7 +125,6 @@ async def test_empty_and_malformed_items(factory, payload, host, payload_overrid
 @pytest.mark.asyncio
 @pytest.mark.parametrize("factory,payload,host", CASES)
 async def test_throttle_propagates_retry_after(factory, payload, host, monkeypatch):
-    monkeypatch.setenv("BRAVE_API_KEY", "test-only")
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda _: httpx.Response(429, headers={"Retry-After": "17"}))
     ) as client:
@@ -163,19 +148,6 @@ async def test_invalid_responses_raise_source_error(response):
     async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: response)) as client:
         with pytest.raises(AdapterError):
             await GitHub().search(SearchQuery(q="python"), client)
-
-
-@pytest.mark.asyncio
-async def test_missing_auth_does_not_send_request(monkeypatch):
-    monkeypatch.delenv("BRAVE_API_KEY", raising=False)
-
-    def handler(_):
-        pytest.fail("An unconfigured adapter must not send a request")
-
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-        assert not Brave().configured
-        with pytest.raises(AdapterError, match="requires BRAVE_API_KEY"):
-            await Brave().search(SearchQuery(q="python"), client)
 
 
 @pytest.mark.parametrize(
@@ -282,13 +254,13 @@ async def test_commons_requires_license():
 
 
 @pytest.mark.asyncio
-async def test_native_github_pagination_and_optional_auth(monkeypatch):
+async def test_native_github_pagination_is_unauthenticated(monkeypatch):
     monkeypatch.setenv("GITHUB_TOKEN", "fixture-token")
 
     def handler(request):
         assert request.url.params["page"] == "3"
         assert request.url.params["per_page"] == "5"
-        assert request.headers["Authorization"] == "Bearer fixture-token"
+        assert "Authorization" not in request.headers
         return httpx.Response(200, json={"items": []})
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:

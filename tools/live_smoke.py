@@ -1,7 +1,7 @@
 """Optional read-only live source verification; not part of deterministic CI.
 
 From backend: uv run python ../tools/live_smoke.py
-Each configured source receives one request. No query history or credential values are emitted.
+Each enabled, configured source receives one request. No query history or credential values are emitted.
 """
 
 import asyncio
@@ -14,25 +14,36 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 from app.engines import create_engines
+from app.engines.base import AdapterError
 from app.models import SearchQuery
 
 
 async def main():
     async with httpx.AsyncClient(
-        headers={"User-Agent": "LUMEN/2.0 (live readiness smoke)"}
+        headers={"User-Agent": "LUMEN/3.0 (live readiness smoke)"}
     ) as client:
 
         async def check(engine):
+            if not engine.enabled:
+                return {"engine": engine.id, "status": "disabled", "results": 0}
             if not engine.configured:
                 return {"engine": engine.id, "status": "unconfigured", "results": 0}
             start = time.perf_counter()
             try:
-                async with asyncio.timeout(10):
+                async with asyncio.timeout(engine.timeout_seconds or 12):
                     results = await engine.search(SearchQuery(q="python", limit=3), client)
                 return {
                     "engine": engine.id,
-                    "status": "success",
+                    "status": "success" if results else "empty",
                     "results": len(results),
+                    "latency_ms": round((time.perf_counter() - start) * 1000, 3),
+                }
+            except AdapterError as error:
+                return {
+                    "engine": engine.id,
+                    "status": error.status,
+                    "error_type": type(error).__name__,
+                    "retry_after_seconds": error.retry_after,
                     "latency_ms": round((time.perf_counter() - start) * 1000, 3),
                 }
             except Exception as error:  # noqa: BLE001 - isolate live source failures for the smoke report
@@ -47,7 +58,7 @@ async def main():
         print(
             json.dumps(
                 {
-                    "mode": "live official provider APIs, one request per configured source",
+                    "mode": "live provider APIs/feeds and permitted opt-in HTML; one request per enabled source",
                     "sources": report,
                 },
                 indent=2,
@@ -56,7 +67,7 @@ async def main():
         return (
             0
             if sum(
-                r["engine"] != "brave" and r["status"] == "success" and r.get("results", 0) > 0
+                r["status"] == "success" and r.get("results", 0) > 0
                 for r in report
             )
             >= 3

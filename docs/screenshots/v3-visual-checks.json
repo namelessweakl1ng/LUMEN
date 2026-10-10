@@ -1,0 +1,59 @@
+{
+  "mode": "production Docker application, live public API results, no interception",
+  "screens": [
+    {
+      "screen": "home-light",
+      "overflow": false,
+      "rounded": [],
+      "gradients": []
+    },
+    {
+      "screen": "home-dark",
+      "overflow": false,
+      "rounded": [],
+      "gradients": []
+    },
+    {
+      "screen": "results-desktop",
+      "overflow": false,
+      "rounded": [],
+      "gradients": []
+    },
+    {
+      "screen": "filters",
+      "overflow": false,
+      "rounded": [],
+      "gradients": []
+    },
+    {
+      "screen": "workspace",
+      "overflow": false,
+      "rounded": [],
+      "gradients": []
+    },
+    {
+      "screen": "profiles",
+      "overflow": false,
+      "rounded": [],
+      "gradients": []
+    },
+    {
+      "screen": "settings",
+      "overflow": false,
+      "rounded": [],
+      "gradients": []
+    },
+    {
+      "screen": "comparison",
+      "overflow": false,
+      "rounded": [],
+      "gradients": []
+    },
+    {
+      "screen": "results-mobile",
+      "overflow": false,
+      "rounded": [],
+      "gradients": []
+    }
+  ]
+}

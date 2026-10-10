@@ -1,9 +1,11 @@
 """Bounded async orchestration, canonical deduplication, and explainable ranking."""
 
 import asyncio
+import hashlib
 import time
 from collections import deque
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import ClassVar, Literal, Protocol
 
 import httpx
@@ -28,6 +30,12 @@ class Engine(Protocol):
     async def search(self, query: SearchQuery, client: httpx.AsyncClient) -> list[SearchResult]: ...
 
 
+@dataclass
+class SharedSearch:
+    task: asyncio.Task[SearchResponse]
+    waiters: int = 0
+
+
 class SearchService:
     def __init__(
         self,
@@ -48,6 +56,7 @@ class SearchService:
         self.cache_size = cache_size
         self.cache_ttl = cache_ttl
         self.cache = SearchCache(cache_size, cache_ttl)
+        self.inflight: dict[str, SharedSearch] = {}
         self.calls: dict[str, deque[float]] = {key: deque() for key in engines}
         self.cooldown: dict[str, float] = {}
         self.cooldown_status: dict[str, Literal["error", "rate_limited", "unavailable"]] = {}
@@ -63,7 +72,13 @@ class SearchService:
             }
             for name in engines
         }
-        self.metrics = {"requests": 0, "cache_hits": 0, "engine_errors": 0, "engine_timeouts": 0}
+        self.metrics = {
+            "requests": 0,
+            "cache_hits": 0,
+            "coalesced_requests": 0,
+            "engine_errors": 0,
+            "engine_timeouts": 0,
+        }
 
     def diagnostics(self) -> dict:
         sources = {}
@@ -83,6 +98,17 @@ class SearchService:
                 else None,
             }
         return {**self.metrics, "engines": sources}
+
+    def availability(self, key: str) -> str:
+        engine = self.engines[key]
+        if not engine.enabled or not engine.configured:
+            return "disabled"
+        if self.cooldown.get(key, 0) > time.monotonic():
+            return self.cooldown_status.get(key, "unavailable")
+        cutoff = time.monotonic() - 60
+        if sum(moment > cutoff for moment in self.calls[key]) >= engine.rate_limit_per_minute:
+            return "rate_limited"
+        return "available"
 
     def observe(self, status: EngineStatus) -> None:
         values = self.engine_metrics[status.engine]
@@ -120,7 +146,8 @@ class SearchService:
             )
         history.append(start)
         try:
-            async with asyncio.timeout(self.timeout):
+            deadline = getattr(engine, "timeout_seconds", None)
+            async with asyncio.timeout(min(self.timeout, deadline) if deadline else self.timeout):
                 async with self.semaphore:
                     results = await engine.search(query, self.client)
             return results[:100], EngineStatus(
@@ -154,8 +181,31 @@ class SearchService:
             )
 
     async def search(self, query: SearchQuery) -> SearchResponse:
-        start = time.monotonic()
         self.metrics["requests"] += 1
+        key = hashlib.sha256(query.model_dump_json().encode()).hexdigest()
+        shared = self.inflight.get(key)
+        if shared is None:
+            # Limit retained coalescing entries; the existing search budgets still apply.
+            if len(self.inflight) >= 128:
+                return await self._search(query)
+            shared = SharedSearch(asyncio.create_task(self._search(query)))
+            self.inflight[key] = shared
+        else:
+            self.metrics["coalesced_requests"] += 1
+        shared.waiters += 1
+        try:
+            # One disconnected browser must not cancel another browser's same search.
+            return (await asyncio.shield(shared.task)).model_copy(deep=True)
+        finally:
+            shared.waiters -= 1
+            if shared.waiters == 0:
+                self.inflight.pop(key, None)
+                if not shared.task.done():
+                    shared.task.cancel()
+                await asyncio.gather(shared.task, return_exceptions=True)
+
+    async def _search(self, query: SearchQuery) -> SearchResponse:
+        start = time.monotonic()
         hit = self.cache.get(query)
         if hit:
             self.metrics["cache_hits"] += 1
@@ -231,7 +281,10 @@ class SearchService:
             category=query.category,
             page=query.page,
             limit=query.limit,
-            has_more=any(len(results) >= query.limit for results, _ in completed),
+            has_more=any(
+                getattr(self.engines[name], "pagination", True) and len(results) >= query.limit
+                for name, (results, _) in zip(selected, completed)
+            ),
             timing_ms=round((time.monotonic() - start) * 1000, 2),
             engine_status=statuses,
             partial=any(status.status != "success" for status in statuses),
