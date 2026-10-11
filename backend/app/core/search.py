@@ -260,7 +260,13 @@ class SearchService:
         statuses = [status for _, status in completed]
         statuses.extend(
             EngineStatus(
-                engine=name, status="unavailable", message="Source unavailable for this category"
+                engine=name,
+                status="unavailable",
+                message=(
+                    "Source unavailable for this category"
+                    if query.category not in self.engines[name].categories
+                    else "Source disabled or not configured"
+                ),
             )
             for name in requested
             if name not in selected
@@ -281,7 +287,8 @@ class SearchService:
             category=query.category,
             page=query.page,
             limit=query.limit,
-            has_more=any(
+            has_more=bool(ranked)
+            and any(
                 getattr(self.engines[name], "pagination", True) and len(results) >= query.limit
                 for name, (results, _) in zip(selected, completed)
             ),

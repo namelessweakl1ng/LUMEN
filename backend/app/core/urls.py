@@ -1,6 +1,17 @@
 """Conservative URL identity and domain filters."""
 
+import re
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+_UNRESERVED = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+
+
+def _decode_unreserved(path: str) -> str:
+    def decode(match: re.Match[str]) -> str:
+        character = chr(int(match.group()[1:], 16))
+        return character if character in _UNRESERVED else match.group()
+
+    return re.sub(r"%[0-9A-Fa-f]{2}", decode, path)
 
 
 def canonical_url(value: str) -> str | None:
@@ -13,7 +24,9 @@ def canonical_url(value: str) -> str | None:
             or parts.password
         ):
             return None
-        host = parts.hostname.encode("idna").decode().lower()
+        host = parts.hostname.rstrip(".").encode("idna").decode().lower()
+        if not host:
+            return None
         port = parts.port
         netloc = f"[{host}]" if ":" in host else host
         if port and not (
@@ -32,7 +45,9 @@ def canonical_url(value: str) -> str | None:
             ],
             key=lambda pair: pair[0],
         )
-        return urlunsplit((parts.scheme.lower(), netloc, parts.path or "/", urlencode(params), ""))
+        return urlunsplit(
+            (parts.scheme.lower(), netloc, _decode_unreserved(parts.path or "/"), urlencode(params), "")
+        )
     except (ValueError, UnicodeError):
         return None
 

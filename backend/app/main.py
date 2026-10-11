@@ -166,6 +166,9 @@ def create_app(
                     "enabled": engine.enabled,
                     "filters": engine.filters,
                     "rate_limit_per_minute": engine.rate_limit_per_minute,
+                    "min_request_interval_seconds": getattr(
+                        engine, "min_request_interval_seconds", 0.0
+                    ),
                     "pagination": getattr(engine, "pagination", True),
                     "interface_type": getattr(engine, "interface_type", "public_api"),
                     "access_note": getattr(engine, "access_note", ""),

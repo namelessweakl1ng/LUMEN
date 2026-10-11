@@ -26,6 +26,26 @@ def test_canonicalization():
     assert canonical_url("javascript:alert(1)") is None
 
 
+def test_canonicalization_decodes_unreserved_escapes_for_identity():
+    assert canonical_url("https://EXAMPLE.com./%7Eguide?q=%41") == canonical_url(
+        "https://example.com/~guide?q=A"
+    )
+
+
+def test_duplicate_sources_share_identity_after_unreserved_normalization():
+    from app.core.ranking import rank_results
+
+    results = rank_results(
+        SearchQuery(q="guide"),
+        [
+            ("wiki", [SearchResult(title="Guide", url="https://example.com/%7Eguide")]),
+            ("github", [SearchResult(title="Guide", url="https://example.com/~guide")]),
+        ],
+    )
+    assert len(results) == 1
+    assert results[0].source_engines == ["wiki", "github"]
+
+
 class Engine:
     id = "fake"
     name = "Fake"
@@ -362,3 +382,32 @@ async def test_result_count_counts_returned_page_not_candidate_pool():
         )
         assert response.result_count == len(response.results) == 3
         assert response.has_more
+
+
+async def test_filtered_empty_page_does_not_advertise_more_results():
+    class FullPage(Engine):
+        async def search(self, query, client):
+            return [
+                SearchResult(title="Python", url=f"https://unwanted.example/{index}")
+                for index in range(query.limit)
+            ]
+
+    async with httpx.AsyncClient() as client:
+        response = await SearchService({"full": FullPage()}, client).search(
+            SearchQuery(q="python", limit=3, site=["wanted.example"])
+        )
+        assert response.result_count == 0
+        assert not response.has_more
+
+
+async def test_disabled_source_reports_its_actual_unavailability_reason():
+    class Disabled(Engine):
+        enabled = False
+
+    async with httpx.AsyncClient() as client:
+        response = await SearchService({"disabled": Disabled()}, client).search(
+            SearchQuery(q="python", engines=["disabled"])
+        )
+        assert response.partial
+        assert response.engine_status[0].status == "unavailable"
+        assert response.engine_status[0].message == "Source disabled or not configured"

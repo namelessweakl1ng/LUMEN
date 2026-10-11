@@ -212,6 +212,26 @@ async def test_missing_retry_after_applies_default_cooldown():
 
 
 @pytest.mark.asyncio
+async def test_access_denial_or_challenge_has_cooldown_without_replay():
+    for response in (
+        httpx.Response(403, text="Forbidden"),
+        httpx.Response(200, text="<html><title>CAPTCHA challenge</title></html>"),
+    ):
+        calls = []
+
+        def handler(request, calls=calls, response=response):
+            calls.append(request)
+            return response
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            with pytest.raises(AdapterError) as caught:
+                await GitHub().search(SearchQuery(q="python"), client)
+        assert len(calls) == 1
+        assert caught.value.status == "unavailable"
+        assert caught.value.retry_after == 600
+
+
+@pytest.mark.asyncio
 async def test_crossref_publication_metadata():
     payload = {
         "message": {

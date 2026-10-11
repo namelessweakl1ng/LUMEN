@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <entry>
+    <id>http://arxiv.org/abs/2512.10504v2</id>
+    <title>Cloud services with quantum advantage</title>
+    <summary>Real research fixture for isolated browser tests.</summary>
+    <published>2025-12-11T00:00:00Z</published>
+    <author><name>Ada Lovelace</name></author>
+  </entry>
+</feed>

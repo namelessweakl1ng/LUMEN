@@ -120,6 +120,7 @@ class SearchEngine:
     enabled = True
     filters: ClassVar[list[str]] = []
     rate_limit_per_minute = 30
+    min_request_interval_seconds = 0.0
     id = ""
     name = ""
     categories: ClassVar[list[str]] = []
@@ -173,6 +174,8 @@ class SearchEngine:
                 raise AdapterError(
                     "Source rate limited", retry_after(response.headers.get("retry-after"), 60)
                 )
+            if response.status_code == 403:
+                raise AdapterError("Source access denied", 600, status="unavailable")
             if response.status_code == 503 and response.headers.get("retry-after"):
                 raise AdapterError(
                     "Source temporarily unavailable",
@@ -185,6 +188,11 @@ class SearchEngine:
             break
         if response.status_code >= 300:
             raise AdapterError(f"Source returned HTTP {response.status_code}")
+        if b"<html" in chunks[:512].lower() and any(
+            marker in chunks[:20000].lower()
+            for marker in (b"captcha", b"challenge", b"access denied")
+        ):
+            raise AdapterError("Source presented an access challenge", 600, status="unavailable")
         try:
             body = json.loads(chunks)
         except ValueError as exc:
