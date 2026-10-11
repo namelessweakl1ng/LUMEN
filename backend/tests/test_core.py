@@ -384,20 +384,29 @@ async def test_result_count_counts_returned_page_not_candidate_pool():
         assert response.has_more
 
 
-async def test_filtered_empty_page_does_not_advertise_more_results():
+async def test_filtered_empty_page_keeps_navigation_to_later_matching_page():
     class FullPage(Engine):
         async def search(self, query, client):
             return [
-                SearchResult(title="Python", url=f"https://unwanted.example/{index}")
-                for index in range(query.limit)
+                SearchResult(
+                    title="Python",
+                    url="https://unwanted.example/first"
+                    if query.page == 1
+                    else "https://wanted.example/second",
+                )
             ]
 
     async with httpx.AsyncClient() as client:
-        response = await SearchService({"full": FullPage()}, client).search(
-            SearchQuery(q="python", limit=3, site=["wanted.example"])
+        service = SearchService({"full": FullPage()}, client)
+        response = await service.search(
+            SearchQuery(q="python", limit=1, site=["wanted.example"])
         )
         assert response.result_count == 0
-        assert not response.has_more
+        assert response.has_more
+        next_page = await service.search(
+            SearchQuery(q="python", limit=1, page=2, site=["wanted.example"])
+        )
+        assert next_page.results[0].url == "https://wanted.example/second"
 
 
 async def test_disabled_source_reports_its_actual_unavailability_reason():

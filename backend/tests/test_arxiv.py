@@ -7,6 +7,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.search import SearchService
 from app.engines.arxiv import Arxiv
 from app.engines.base import AdapterError
 from app.engines.sources import create_engines
@@ -55,6 +56,24 @@ async def test_arxiv_empty_feed_and_invalid_entries():
     body = b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>https://evil.example/abs/123</id><title>Bad</title></entry></feed>'
     async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200, content=body))) as client:
         assert await Arxiv().search(SearchQuery(q="quantum", category="science"), client) == []
+
+
+@pytest.mark.asyncio
+async def test_arxiv_html_challenge_triggers_cooldown_without_replay():
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, text='<html><form id="challenge-form">CAPTCHA</form></html>')
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        service = SearchService({"arxiv": Arxiv()}, client)
+        query = SearchQuery(q="quantum", category="science", engines=["arxiv"])
+        first = await service.search(query)
+        second = await service.search(query.model_copy(update={"q": "physics"}))
+    assert len(calls) == 1
+    assert first.engine_status[0].status == "unavailable"
+    assert second.engine_status[0].status == "unavailable"
 
 
 @pytest.mark.asyncio

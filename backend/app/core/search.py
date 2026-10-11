@@ -287,8 +287,7 @@ class SearchService:
             category=query.category,
             page=query.page,
             limit=query.limit,
-            has_more=bool(ranked)
-            and any(
+            has_more=any(
                 getattr(self.engines[name], "pagination", True) and len(results) >= query.limit
                 for name, (results, _) in zip(selected, completed)
             ),

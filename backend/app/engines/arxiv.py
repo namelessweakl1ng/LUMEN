@@ -19,7 +19,7 @@ from defusedxml.common import DefusedXmlException
 
 from app.models import SearchQuery, SearchResult
 
-from .base import AdapterError, SearchEngine, clean, parse_date, retry_after
+from .base import AdapterError, SearchEngine, challenge_response, clean, parse_date, retry_after
 
 ATOM = "{http://www.w3.org/2005/Atom}"
 
@@ -75,6 +75,8 @@ class Arxiv(SearchEngine):
             raise AdapterError("Source access denied", 600, status="unavailable")
         if response.status_code >= 300:
             raise AdapterError(f"Source returned HTTP {response.status_code}")
+        if challenge_response(chunks, response.headers.get("content-type", "")):
+            raise AdapterError("Source presented an access challenge", 600, status="unavailable")
         try:
             root = ElementTree.fromstring(bytes(chunks))
         except (ElementTree.ParseError, DefusedXmlException, ValueError) as exc:

@@ -110,6 +110,17 @@ def retry_after(value: str | None, default: float) -> float:
             return default
 
 
+def challenge_response(content: bytes, content_type: str = "") -> bool:
+    head = content[:20_000].lower()
+    return (
+        (b"<html" in head[:512] or "text/html" in content_type.lower())
+        and any(
+            marker in head
+            for marker in (b"captcha", b"challenge", b"access denied", b"verify you are human")
+        )
+    )
+
+
 class SearchEngine:
     pagination = True
     interface_type = "public_api"
@@ -188,10 +199,7 @@ class SearchEngine:
             break
         if response.status_code >= 300:
             raise AdapterError(f"Source returned HTTP {response.status_code}")
-        if b"<html" in chunks[:512].lower() and any(
-            marker in chunks[:20000].lower()
-            for marker in (b"captcha", b"challenge", b"access denied")
-        ):
+        if challenge_response(chunks, response.headers.get("content-type", "")):
             raise AdapterError("Source presented an access challenge", 600, status="unavailable")
         try:
             body = json.loads(chunks)
