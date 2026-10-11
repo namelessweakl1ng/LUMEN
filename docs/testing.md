@@ -27,6 +27,7 @@ docker compose build
 ```
 
 Backend tests cover normalization, query validation, ranking, filters, cache identity/bounds, adapter payloads, timeout/error handling and API behavior. Frontend unit and Playwright tests validate search and local research workflows. The test-only FastAPI server in backend/tests/e2e_server.py injects HTTP fixtures into real adapters to provide deterministic provider output; they are test-only and do not substitute fixtures in production.
+arXiv Atom parsing, bounded responses, block handling, serialized request spacing and registry inclusion have dedicated tests. The browser fixture server provides an arXiv Atom record for science searches and never sends a provider request.
 
 CI runs backend lint/types/tests, frontend lint/types/unit/build/E2E and Compose configuration/image builds. Browser installation may need operating-system packages (`playwright install --with-deps chromium`). Production image builds require access to their registries.
 

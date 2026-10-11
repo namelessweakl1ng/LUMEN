@@ -1,29 +1,26 @@
-# Engine adapters
+# Production search adapters
 
-Adapters normalize untrusted payloads and report failures rather than invented results. All default sources work without third-party credentials. Keyless access still has quotas, terms and availability limits.
+The registry in `backend/app/engines/sources.py` contains the six supported public API adapters below. All are enabled on startup without provider credentials or engine flags. Metadata from `/api/v1/engines` reports the provider, categories, filters, pagination, request ceiling, minimum interval, timeout and current availability. A successful HTTP response alone is never treated as a valid result: each adapter parses and validates actual records.
 
-| Adapter | Interface | Scope | Default |
+| Provider | Categories | Interface and limits | Coverage |
 | --- | --- | --- | --- |
-| Wikipedia | MediaWiki action API | Encyclopedic titles and snippets | Enabled |
-| Wikimedia Commons | MediaWiki action API | Images with attribution and licensing metadata | Enabled |
-| GitHub | Unauthenticated Repository Search REST API | Public repositories, stars and language | Enabled |
-| Crossref | REST works API | Scholarly metadata, DOI, authors and venue | Enabled |
-| Hacker News | Algolia HN search API | Technology discussions and submitted articles | Enabled |
-| Google News RSS | Public news search feed, fixed en-US edition | News articles and publishers; first page only | Disabled pending permission |
-| DuckDuckGo HTML | Experimental unofficial HTML parsing | General results; first page only | Disabled |
+| Wikipedia | General, science | MediaWiki public API; 30 requests/minute per backend | Encyclopedia articles |
+| GitHub repositories | General, developer | Public REST API; 6 requests/minute per backend | Repository titles and descriptions |
+| Crossref papers | General, science | Public REST API; 30 requests/minute per backend | Research metadata, not guaranteed full text |
+| Hacker News | General, developer, news | Public Algolia API; 30 requests/minute per backend | Technology submissions and discussion |
+| Wikimedia Commons | Images | MediaWiki public API; 30 requests/minute per backend | Licensed media records |
+| arXiv | Science | Public Atom API; 20 requests/minute and one request every 3 seconds, serialized | Research preprints and abstracts |
 
-GitHub's unauthenticated quotas are limited. `CROSSREF_MAILTO` is optional contact identification for responsible provider use, not an API credential. Wikipedia/Commons are not general-web indexes; Crossref does not guarantee full text; Hacker News is not comprehensive news coverage. Google News RSS is not Google Web Search. No Google, Bing or Brave Web Search coverage is claimed. Maps, videos and a dedicated file index remain unavailable.
+The bundled Docker deployment has one backend process. [arXiv API terms](https://info.arxiv.org/help/api/tou.html) require one connection and at least three seconds between requests **across all operator machines**. The adapter serializes and spaces requests inside one process. Multi-replica deployments must add shared rate coordination before using arXiv; the process-local limiter alone does not satisfy the cross-machine condition. The [arXiv API manual](https://info.arxiv.org/help/api/user-manual.html) documents Atom, pagination and sorting. arXiv descriptive metadata is available for discovery, with provider attribution through each result's origin.
 
-`GET /api/v1/engines` exposes engine IDs, names, supported categories and filters, pagination, availability, interface type, access notes, deadlines and request quotas. Treat deployed metadata as authoritative: filtering and pagination are source-specific and may change. Local domain, extension and date filters inspect retrieved candidates, not entire provider indexes.
+`CROSSREF_MAILTO` is optional contact identification, not an API key. Fixed HTTPS destinations, bounded response sizes, result URL validation, deadlines, rate budgets, and partial-failure status apply to every source. HTTP 403 and HTML challenges stop requests and enter a cooldown; HTTP 429 and 503 `Retry-After` values are respected. The service does not bypass challenges or rotate proxies. Local site, extension and fallback date filters apply to retrieved candidates, not entire upstream indexes. Pagination is source-specific and `has_more` is conservative; without upstream totals a full page cannot prove another matching page exists.
 
-DuckDuckGo HTML requires explicit `LUMEN_ENABLE_DDG_HTML=1` opt-in only when automated access is permitted for the deployment. Public readability is not permission to automate. Challenges, blocks, unexpected markup and size-limit failures are surfaced as unavailable/error statuses. The adapter stops rather than bypassing controls, and challenge/rate-limit cooldowns suppress repeated requests. The flag grants no permission and does not guarantee access.
+## Provider-access review — 2026-10-11
 
-Provider policies and operational availability can change. Deployment operators must review current terms and quotas. Fixed outbound destinations prevent arbitrary search proxies; adapter fixtures prove parser contracts, not live availability. No additional general-web adapter is advertised without adequate permission and operational evidence.
+- [DuckDuckGo robots.txt](https://duckduckgo.com/robots.txt) disallows `/html` and `/lite`, and its [Acceptable Use Policy](https://duckduckgo.com/acceptable-use) raises display restrictions for use in another service. The previous experimental HTML adapter and flag were removed; there is no DuckDuckGo production coverage.
+- [Google Search robots.txt](https://www.google.com/robots.txt) disallows `/search` for the general user agent. [Google terms](https://policies.google.com/terms) prohibit automation contrary to machine-readable instructions. [Google News robots.txt](https://news.google.com/robots.txt) disallows RSS search paths. The prior RSS adapter and flag were removed; there is no Google Search or Google News coverage.
+- Bing, Mojeek, Brave, Yahoo and Ecosia official access documentation could not be retrieved through this cloud proxy (HTTP 403). Permission for automated keyless metasearch was not verified, so none was added or queried.
+- [Stack Exchange API documentation](https://api.stackexchange.com/docs) describes anonymous access, quota and backoff. Its complete [API legal terms](https://stackexchange.com/legal/api-terms-of-use) could not be retrieved through this proxy, so no adapter was enabled.
+- The existing GitHub, Crossref and MediaWiki documentation pages also returned proxy HTTP 403 during this review. Their public API adapters returned valid live results, but this environment could not independently reverify the current complete access terms. Deployers remain responsible for current provider conditions and quotas.
 
-## Provider access review — 2026-10-10
-
-The retrieved [Google terms](https://policies.google.com/terms) prohibit “using automated means to access content from any of our services in violation of the machine-readable instructions on our web pages”. [Google News robots.txt](https://news.google.com/robots.txt) declares `User-agent: *` and `Disallow: /`; its selective Allow list does not include `/rss` or `/rss/search`. The RSS parser remains tested, but `LUMEN_ENABLE_GOOGLE_NEWS_RSS=0` disables it by default pending documented provider permission. A successful request demonstrates functionality, not permitted use. Do not enable it merely because the endpoint responds.
-
-[DuckDuckGo terms](https://duckduckgo.com/terms) did not establish express permission for this HTML metasearch use. Its HTML robots file allowing `/` does not alone grant permission. It therefore remains experimental and disabled.
-
-The review found specialized candidates rather than a permitted general-web replacement. [arXiv API terms](https://info.arxiv.org/help/api/tou.html) permit descriptive metadata reuse but require a single connection and at least three seconds between requests across the operator's machines. [Stack Exchange API documentation](https://api.stackexchange.com/docs) supports anonymous access with polling, quota, backoff and attribution obligations. Neither adapter is added: those operational boundaries require implementation and neither offers full-web coverage. Some GitHub, Crossref and MediaWiki reference pages remained blocked by the cloud proxy, so their current terms text is not represented as freshly verified.
+The five existing providers and arXiv are specialized indexes, not a general-web search engine. Reliable, permitted, keyless general-web coverage remains an **unmet primary requirement** of PR #5. No Google, Bing, DuckDuckGo or comprehensive web coverage is claimed. This PR must not be considered production-complete for general-web discovery on the basis of the six specialized sources.

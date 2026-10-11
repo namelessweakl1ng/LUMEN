@@ -6,4 +6,6 @@ FastAPI validates requests into Pydantic models. An injected registry selects ad
 
 The backend owns a bounded, process-local TTL cache and aggregate diagnostics. Each worker has separate caches, counters and upstream throttling state; running more workers increases aggregate provider load. One worker is the default. No database or Redis is required.
 
+The production registry contains six enabled public API providers. arXiv serializes its requests and spaces starts by at least three seconds in the single backend process supplied by Compose. Multiple backend instances require shared rate coordination to satisfy arXiv's cross-machine limit. Experimental HTML/RSS adapters are not in the registry.
+
 Dedicated `/search`, `/workspace`, `/saved`, `/profiles`, `/settings` and `/compare` routes share responsive navigation. Zustand stores local preferences and profiles; IndexedDB stores research collections and optional history. No account or server-side research storage is required. See [privacy](privacy.md), [API](api.md) and [deployment](deployment.md).

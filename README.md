@@ -2,7 +2,7 @@
 
 LUMEN is a self-hosted, keyless metasearch application with a Next.js frontend and an independent Python/FastAPI backend. It searches selected sources concurrently, normalizes and deduplicates results, and applies explainable ranking. It does not crawl or index the entire web.
 
-Default sources are Wikipedia, Wikimedia Commons, GitHub public repositories, Crossref and Hacker News. No third-party API credentials are required. DuckDuckGo HTML and Google News RSS are retained but disabled by default; enable them only with documented permission for the proposed automated use. Provider availability, quotas and access conditions still apply. Google News RSS supplies news, not Google Web Search.
+Default sources are Wikipedia, Wikimedia Commons, GitHub public repositories, Crossref, Hacker News and arXiv research papers. All six start enabled without third-party API credentials. Provider availability, quotas and access conditions still apply. General-web coverage remains an unmet goal; [the provider review](docs/engine-adapters.md#provider-access-review--2026-10-11) explains why Google, Bing and DuckDuckGo are absent.
 
 The redesigned interface separates [Search](docs/migration-v3.md), Research workspace, Saved items, Search profiles, Settings and comparison. Collections, notes, tags, profiles and optional history remain in browser storage. The existing LUMEN logo and wordmark are preserved.
 
@@ -38,7 +38,7 @@ Python 3.12+, uv, Node 22 and Bun are used for development. Containers use non-r
 
 ## Limitations
 
-Sources provide specialized discovery rather than comprehensive web coverage. Crossref returns scholarly metadata rather than guaranteed full text; Hacker News focuses on technology; news RSS is not a general web index. Maps, videos and a dedicated file index remain unavailable. Filters and pagination vary by source, and local post-filters may reduce result counts. Rankings and comparison overlap are heuristics, not objective quality scores.
+Sources provide specialized discovery rather than comprehensive web coverage. Crossref and arXiv return research metadata rather than guaranteed full text; Hacker News focuses on technology and is not comprehensive current news. Maps, videos and a dedicated file index remain unavailable. Filters and pagination vary by source, and local post-filters may reduce result counts. Rankings and comparison overlap are heuristics, not objective quality scores.
 
 Caches, cooldowns and quotas are process-local; extra workers multiply upstream traffic. Browser storage belongs to its origin: export collections before changing hosts. Queries reach selected providers and optional images may contact their hosts; see the privacy guide.
 

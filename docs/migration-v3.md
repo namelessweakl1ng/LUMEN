@@ -8,7 +8,7 @@ Navigation now has dedicated `/search`, `/workspace`, `/saved`, `/profiles`, `/s
 
 Existing IndexedDB collections and browser profile/preferences storage are preserved. Export JSON before changing origin or clearing storage; deployments on another scheme, host or port cannot read the former origin's data. History remains opt-in. Unsupported or retired engines should not be selected in new profiles; remaining valid local profile settings are retained.
 
-Default adapters cover Wikipedia, Commons, public GitHub repositories, Crossref and Hacker News. DuckDuckGo HTML remains an experimental, default-off first-page source, subject to permitted automated access and cooldowns. Google News RSS is retained but disabled (`LUMEN_ENABLE_GOOGLE_NEWS_RSS=0`) pending documented provider permission after review of Google terms and robots restrictions. News capabilities reflect enabled sources; Google News is not available by default. V3 makes no claim to comprehensive general-web coverage.
+The initial V3 release used five default adapters and retained experimental, disabled DuckDuckGo HTML and Google News RSS modules. PR #5 retired those modules and added enabled arXiv research search. See the [current source registry and access review](engine-adapters.md). Neither release claims comprehensive general-web coverage.
 
 ## Screenshots
 

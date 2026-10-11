@@ -31,7 +31,9 @@ async def main():
             start = time.perf_counter()
             try:
                 async with asyncio.timeout(engine.timeout_seconds or 12):
-                    results = await engine.search(SearchQuery(q="python", limit=3), client)
+                    results = await engine.search(
+                        SearchQuery(q="python", category=engine.categories[0], limit=3), client
+                    )
                 return {
                     "engine": engine.id,
                     "status": "success" if results else "empty",
@@ -58,7 +60,7 @@ async def main():
         print(
             json.dumps(
                 {
-                    "mode": "live provider APIs/feeds and permitted opt-in HTML; one request per enabled source",
+                    "mode": "live public APIs; one request per production source",
                     "sources": report,
                 },
                 indent=2,

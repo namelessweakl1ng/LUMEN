@@ -14,6 +14,7 @@ The backend exposes versioned JSON routes and interactive schemas at `/docs`; th
 Search example: `/api/v1/search?q=python&category=developer&engines=github,hackernews&limit=10`. Query validation caps length, result count and pagination. Filter parameters include `language`, `time_range`, `safe_search`, `site`, `exclude_site`, `file_type`, `ranking` and `preferred_domains`; list values are comma-separated at the GET boundary.
 
 Search returns normalized results, result count, page, limit, `has_more`, measured `timing_ms`, engine statuses, partial/cached flags, applied filters and available source suggestions. `result_count` is the number actually returned (at most `limit`), not a candidate count or an upstream total. It does not assert a complete global result total. Results contain stable IDs, safe URLs, source attribution, typed metadata and ranking explanations.
+The engine metadata endpoint also reports `min_request_interval_seconds`; arXiv reports 3.0. A full upstream page may still set `has_more` even when the next page is empty because providers do not all return totals.
 
 A default category with no configured eligible source returns HTTP 422 (`No configured sources for this category`). Explicit unavailable source selections remain visible in engine statuses and partial-result metadata.
 

@@ -1,48 +1,14 @@
 {
-  "observed_date": "2026-10-10",
-  "mode": "live provider APIs/feeds; one request per enabled source",
+  "observed_date": "2026-10-11",
+  "mode": "live public APIs; one request per production source",
+  "query": "python",
+  "results_are_real_provider_records": true,
   "sources": [
-    {
-      "engine": "wikipedia",
-      "status": "success",
-      "results": 3,
-      "latency_ms": 955.258
-    },
-    {
-      "engine": "github",
-      "status": "success",
-      "results": 3,
-      "latency_ms": 779.793
-    },
-    {
-      "engine": "crossref",
-      "status": "success",
-      "results": 3,
-      "latency_ms": 511.323
-    },
-    {
-      "engine": "hackernews",
-      "status": "success",
-      "results": 3,
-      "latency_ms": 508.371
-    },
-    {
-      "engine": "commons",
-      "status": "success",
-      "results": 3,
-      "latency_ms": 825.44
-    },
-    {
-      "engine": "google_news",
-      "status": "success",
-      "results": 3,
-      "latency_ms": 987.146
-    },
-    {
-      "engine": "duckduckgo",
-      "status": "disabled",
-      "results": 0
-    }
-  ],
-  "policy_review_note": "Observed before Google News access-policy review. Google News RSS was subsequently disabled by default pending documented permission; response success is not permission evidence."
+    {"engine": "wikipedia", "status": "success", "results": 3, "latency_ms": 1462.383},
+    {"engine": "github", "status": "success", "results": 3, "latency_ms": 746.178},
+    {"engine": "crossref", "status": "success", "results": 3, "latency_ms": 912.697},
+    {"engine": "hackernews", "status": "success", "results": 3, "latency_ms": 765.025},
+    {"engine": "commons", "status": "success", "results": 3, "latency_ms": 1036.78},
+    {"engine": "arxiv", "status": "success", "results": 3, "latency_ms": 532.343}
+  ]
 }

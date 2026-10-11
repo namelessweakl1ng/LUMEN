@@ -1,4 +1,4 @@
-# V3 validation record
+# Validation record
 
 Validated on 2026-10-10 against the V3 branch. Backend: Ruff and mypy passed; 108 pytest tests passed (one upstream Starlette deprecation warning). Frontend: lint and TypeScript passed; 74 unit tests across 11 files passed; production build passed. All 26 full-stack Playwright tests passed through the fixture-enabled FastAPI server.
 
@@ -10,7 +10,7 @@ The [fixture benchmark](../benchmarks/fixture_search.py) uses injected transport
 
 ## Live source observation — 2026-10-10
 
-An initial live smoke, before completion of provider-policy review, returned three results from each of five default public API sources and the then-enabled Google News RSS adapter. DuckDuckGo HTML was disabled and received no request. These measurements were reported by the integration run and are preserved in [live-smoke-results.json](live-smoke-results.json); they are source-request latency, not end-to-end search performance, permission evidence or a future availability guarantee. Google News RSS was subsequently disabled after terms/robots review; no further live Google requests are authorized by this record.
+An initial live smoke, before completion of provider-policy review, returned three results from each of five default public API sources and the then-enabled Google News RSS adapter. DuckDuckGo HTML was disabled and received no request. These historical measurements are preserved in [live-smoke-v3-results.json](live-smoke-v3-results.json); they are source-request latency, not end-to-end search performance, permission evidence or a future availability guarantee. Google News RSS was subsequently disabled after terms/robots review; no further live Google requests are authorized by this record.
 
 | Source | Results | Request latency |
 | --- | --- | --- |
@@ -24,3 +24,23 @@ An initial live smoke, before completion of provider-policy review, returned thr
 Compose configuration, both production image builds and both container health checks passed. Same-origin production search returned three actual results for python. Builds used the cloud trust bundle and proxy through BuildKit secrets, without disabling TLS verification. A final frontend image rebuild exhausted disk space; pruning unused older build cache restored capacity and the rebuild passed.
 
 Nine screenshots were captured from the production Docker application using live public API results without response interception, then inspected twice. Automated checks found no horizontal overflow, rounded controls or gradients. A missing link-arrow glyph found in the first inspection was replaced before final capture. See [visual checks](screenshots/v3-visual-checks.json) and [screenshots](migration-v3.md#screenshots). The logo/wordmark file is byte-for-byte unchanged. Browser storage migration, keyboard handling, profile sanitization, comparison attribution and cross-tab notes have regression coverage. Hosted CI results are tracked on the PR separately; local validation does not imply a hosted CI result.
+
+## PR #5 provider and search observations — 2026-10-11
+
+Six production public API sources were queried once each through `tools/live_smoke.py` for `python`. All returned three real normalized results. This establishes observed availability on this date, not permission by itself or a long-term uptime guarantee. The [JSON evidence](live-smoke-results.json) records per-source latency: Wikipedia 1462.383 ms, GitHub 746.178 ms, Crossref 912.697 ms, Hacker News 765.025 ms, Commons 1036.780 ms, arXiv 532.343 ms. arXiv also returned one real Atom record in a separate bounded query while verifying its protocol; its three-second spacing and single-process limit are tested with an injected clock.
+
+Five real user-query samples used the actual aggregation service with no fixtures. Counts below are returned results at `limit=5`, and timings are single observations, not p95 latency:
+
+| Query | Category | Returned | Total response | Source status |
+| --- | --- | ---: | ---: | --- |
+| Python FastAPI tutorial | General | 5 | 660.7 ms | 4/4 succeeded |
+| Best Linux distributions for developers | General | 5 | 693.5 ms | 4/4 succeeded |
+| Docker Compose networking | Developer | 5 | 534.0 ms | 2/2 succeeded |
+| Machine learning research papers | Science | 5 | 1661.7 ms | 3/3 succeeded, including arXiv |
+| Latest cybersecurity news | News | 5 | 241.9 ms | 1/1 succeeded |
+
+Relevance remains weak for broad queries: the Linux sample's first result was a repository overview and the cybersecurity sample consisted of Hacker News submissions, not comprehensive fresh news. Specialized APIs cannot meet the requested general-web search goal. Provider access evidence and unverified permissions are detailed in [adapters](engine-adapters.md#provider-access-review--2026-10-11).
+
+PR #5 local verification: Ruff and mypy passed, **105 backend tests** passed (one Starlette test-client deprecation warning), frontend lint and TypeScript passed, **74 unit tests** passed, the production build passed and **30 full-stack Playwright tests** passed. Docker Compose configuration and both production image builds passed using the cloud trust/proxy override. Both containers became healthy. Through the running production frontend, `/api/v1/health` returned `ok`; engine metadata listed precisely the six enabled sources; a live science search returned three real results with Wikipedia, Crossref and arXiv all reporting success and an arXiv result present. These are current-instance results, not a hosted CI claim.
+
+The nine V3 production screenshots were recaptured after the small frontend review fixes and visually inspected. The updated scanner checks every visible element for gradients, all four control corners for rounding and horizontal overflow; [its evidence](screenshots/v3-visual-checks.json) recorded none. The wordmark source file is unchanged. General-web coverage and fresh complete terms verification for some existing providers remain unresolved, so PR #5 is not production-complete for the user's primary goal.
