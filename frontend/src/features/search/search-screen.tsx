@@ -190,16 +190,19 @@ export function SearchScreen({ landing = false }: { landing?: boolean }) {
   if (landing && !q)
     return (
       <main className="landing">
-        <p className="eyebrow">A quieter place to search</p>
+        <p className="eyebrow">LUMEN — Developer &amp; Research Discovery</p>
         <h1>
-          Follow your curiosity.
+          Discover code.
           <br />
-          Find the signal.
+          Explore research.
+          <br />
+          Connect knowledge.
         </h1>
         <p className="landing-description">
-          Search open knowledge, code and news.
+          Search open-source projects, scientific papers, technical discussions,
+          and trusted knowledge sources in one place.
           <br />
-          Keep what matters in your own workspace.
+          Keep what matters in your own research workspace.
         </p>
         <div className="landing-search">
           <SearchInput

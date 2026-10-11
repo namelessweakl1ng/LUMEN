@@ -17,12 +17,22 @@ async function save(page: Page, title: string) {
 
 test("dedicated homepage navigation reaches all sections", async ({ page }) => {
   await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Discover code. Explore research. Connect knowledge." })).toBeVisible();
+  await expect(page.getByText("Search open-source projects, scientific papers, technical discussions, and trusted knowledge sources in one place.")).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Main navigation" });
   for (const [name, path, heading] of [["Workspace", "/workspace", "Research workspace"], ["Saved", "/saved", "Saved items"], ["Profiles", "/profiles", "Search profiles"], ["Settings", "/settings", "Settings"]]) {
     await nav.getByRole("link", { name, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
   }
+});
+
+test("built-in profiles explain specialized coverage without changing their sources", async ({ page }) => {
+  await page.goto("/profiles");
+  await expect(page.getByText("Mixed-source knowledge discovery across compatible sources.")).toBeVisible();
+  await expect(page.getByText("Open-source repositories and developer discussions.")).toBeVisible();
+  await expect(page.getByText("Scholarly publications and related encyclopedic knowledge.")).toBeVisible();
+  await expect(page.getByText("Technology-focused Hacker News submissions; source-limited coverage.")).toBeVisible();
 });
 
 test("search reaches real FastAPI adapters and keeps diagnostics collapsed", async ({ page }) => {
@@ -198,7 +208,7 @@ test("comparison reports shared and unique results with real provider statuses",
   await expect(page.getByRole("region", { name: "right comparison results" })).toContainText("success");
 });
 
-test("retired RSS source is unavailable in production news searches", async ({ page }) => {
+test("retired provider stays unavailable in production news searches", async ({ page }) => {
   await page.goto("/search?q=linux&category=news&engines=google_news");
   await expect(page.getByRole("status").filter({ hasText: "All selected sources are unavailable" })).toBeVisible();
   await expect(page.getByTestId("search-result")).toHaveCount(0);

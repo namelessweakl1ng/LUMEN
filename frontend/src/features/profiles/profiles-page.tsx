@@ -5,6 +5,12 @@ import { useState } from "react";
 import { useProfiles, useSources } from "@/features/search/search-context";
 import { profileParams, type Profile } from "@/lib/search/profiles";
 import type { SearchCategory, TimeRange } from "@/types/search";
+const builtinDescriptions: Record<string, string> = {
+  balanced: "Mixed-source knowledge discovery across compatible sources.",
+  developer: "Open-source repositories and developer discussions.",
+  research: "Scholarly publications and related encyclopedic knowledge.",
+  news: "Technology-focused Hacker News submissions; source-limited coverage.",
+};
 export function ProfilesPage() {
   const {
     builtins,
@@ -86,6 +92,7 @@ export function ProfilesPage() {
             {builtins.map((p) => (
               <article key={p.id} className="lumen-panel p-5">
                 <h3 className="text-lg font-semibold">{p.name}</h3>
+                <p className="mt-2 text-sm">{builtinDescriptions[p.id]}</p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {p.category} · {p.ranking} ·{" "}
                   {p.engines

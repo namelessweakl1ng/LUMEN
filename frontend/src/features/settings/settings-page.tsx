@@ -231,15 +231,18 @@ export function SettingsPage() {
             )}
             {section === "About" && (
               <>
-                <p className="text-lg font-medium">LUMEN V3</p>
+                <p className="text-lg font-medium">
+                  LUMEN — Developer &amp; Research Discovery
+                </p>
                 <p>
-                  Independent keyless metasearch and a local-first research
-                  workspace.
+                  Discover repositories, research papers, technical discussions,
+                  knowledge and openly licensed images from six public sources.
+                  Keep profiles and research in this browser.
                 </p>
                 <p className="text-muted-foreground">
-                  Public APIs and news feeds provide specialized coverage.
-                  Experimental HTML sources may be disabled or blocked; source
-                  failures are reported openly.
+                  Coverage depends on selected sources and their availability;
+                  this is not an index of the entire web. Queries reach upstream
+                  providers, and source failures are reported openly.
                 </p>
                 <p>
                   Returned counts, ranking explanations and comparison timings

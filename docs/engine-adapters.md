@@ -1,5 +1,7 @@
 # Production search adapters
 
+These specialized sources support developer, research and knowledge discovery. They do not provide a web-scale index; query coverage depends on source selection, provider access and quotas.
+
 The registry in `backend/app/engines/sources.py` contains the six supported public API adapters below. All are enabled on startup without provider credentials or engine flags. Metadata from `/api/v1/engines` reports the provider, categories, filters, pagination, request ceiling, minimum interval, timeout and current availability. A successful HTTP response alone is never treated as a valid result: each adapter parses and validates actual records.
 
 | Provider | Categories | Interface and limits | Coverage |
@@ -23,4 +25,4 @@ The bundled Docker deployment has one backend process. [arXiv API terms](https:/
 - [Stack Exchange API documentation](https://api.stackexchange.com/docs) describes anonymous access, quota and backoff. Its complete [API legal terms](https://stackexchange.com/legal/api-terms-of-use) could not be retrieved through this proxy, so no adapter was enabled.
 - The existing GitHub, Crossref and MediaWiki documentation pages also returned proxy HTTP 403 during this review. Their public API adapters returned valid live results, but this environment could not independently reverify the current complete access terms. Deployers remain responsible for current provider conditions and quotas.
 
-The five existing providers and arXiv are specialized indexes, not a general-web search engine. Reliable, permitted, keyless general-web coverage remains an **unmet primary requirement** of PR #5. No Google, Bing, DuckDuckGo or comprehensive web coverage is claimed. This PR must not be considered production-complete for general-web discovery on the basis of the six specialized sources.
+The five existing providers and arXiv cover specialized indexes that fit LUMEN's developer and research discovery scope. No Google, Bing, DuckDuckGo or comprehensive web coverage is claimed. Provider restrictions and outages may make individual sources unavailable; queries still reach the selected upstream services.

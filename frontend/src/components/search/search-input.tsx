@@ -20,7 +20,7 @@ export function SearchInput({
   loading = false,
   id = "lumen-search",
   label = "Search query",
-  placeholder = "Search knowledge, code, news…",
+  placeholder = "Search projects, papers, discussions…",
   inputRef,
   spellCheck = false,
   name,

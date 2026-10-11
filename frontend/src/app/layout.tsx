@@ -4,8 +4,9 @@ import { ApplicationShell } from "@/components/layout/application-shell";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Lumen — Search, without the noise.",
-  description: "Independent metasearch with local research workspaces.",
+  title: "LUMEN — Developer & Research Discovery",
+  description:
+    "Discover open-source repositories, scientific papers, technical discussions and knowledge sources in one place.",
   referrer: "no-referrer",
   robots: {
     // Lumen is a private tool. Don't let search engines index search

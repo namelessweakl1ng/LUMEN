@@ -24,7 +24,7 @@ describe("search filter capabilities", () => {
   it("enables date filtering for dated adapters or declared source filters", () => {
     for (const id of ["github", "crossref", "hackernews"])
       expect(supportsDateFilter([engine(id)])).toBe(true);
-    expect(supportsDateFilter([engine("google_news")])).toBe(false);
+    expect(supportsDateFilter([engine("commons")])).toBe(false);
     expect(supportsDateFilter([engine("other", ["time_range"])])).toBe(true);
     expect(supportsDateFilter([engine("wikipedia")])).toBe(false);
   });

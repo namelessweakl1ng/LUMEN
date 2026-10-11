@@ -1,12 +1,14 @@
 # Search execution
 
+Search is scoped to developer, research and knowledge sources. General is mixed-source knowledge discovery; Developer emphasizes GitHub and Hacker News; Research uses Crossref and Wikipedia by default, with arXiv available in the science category; News uses Hacker News for technology-focused submissions only. Built-in profile selection and source configurations remain unchanged, and user-created profiles keep their existing settings.
+
 A query contains category, selected engines, language, time range, safe-search mode, page, limit, domain include/exclude filters, optional file type, ranking mode and preferred domains. Unsupported categories are unavailable instead of silently returning unrelated data.
 
 The registry supplies eligible, configured engines. Adapter requests execute concurrently, constrained by a semaphore and source throttling. Deadlines prevent one slow provider from holding the whole response indefinitely. Successful sources remain useful when others fail; statuses distinguish failures from empty responses. Pending tasks are cleaned up when the deadline expires.
 
 Canonical URLs remove fragments and known tracking parameters while retaining resource-identifying query parameters. Duplicate results merge attribution and useful metadata. Ranking uses normalized source positions rather than combining incomparable provider scores.
 
-Domain, file type and publication-time checks can be local post-filters. They operate on retrieved candidates and may yield fewer results than requested; they are not equivalent to provider-side full-index filtering. Engine metadata identifies supported upstream filters. Pagination is bounded and provider-specific: returned counts describe this response, not an exact total across the web.
+Domain, file type and publication-time checks can be local post-filters. They operate on retrieved candidates and may yield fewer results than requested; they are not equivalent to provider-side full-index filtering. Engine metadata identifies supported upstream filters. Pagination is bounded and provider-specific: returned counts describe this response, not a total across all selected sources.
 
 The default cache holds at most 128 entries for 120 seconds. The default overall query deadline is nine seconds with an eight-second default per-engine timeout and outbound concurrency of twelve. The bounded TTL cache keys every query/filter and engine selection. Only successful responses are reusable; errors must not become durable search results. Identical concurrent requests share a bounded in-flight operation keyed by the complete query; cancelling one waiter leaves other waiters running, while the final waiter cancels the underlying operation. It stores queries transiently in memory to form keys, without persistent history or raw query logs. Cache behavior differs across workers and instances.
 

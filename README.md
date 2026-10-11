@@ -1,8 +1,8 @@
-# LUMEN V3
+# LUMEN — Developer & Research Discovery
 
-LUMEN is a self-hosted, keyless metasearch application with a Next.js frontend and an independent Python/FastAPI backend. It searches selected sources concurrently, normalizes and deduplicates results, and applies explainable ranking. It does not crawl or index the entire web.
+LUMEN is an open-source, self-hosted discovery platform for developers, computer science students, researchers, engineers and technical learners. It brings open-source repositories, scientific papers, technical discussions, encyclopedic knowledge and openly licensed images into one search interface. It helps people compare sources and organize findings with customizable search profiles, explainable ranking, comparison tools and browser-local research collections.
 
-Default sources are Wikipedia, Wikimedia Commons, GitHub public repositories, Crossref, Hacker News and arXiv research papers. All six start enabled without third-party API credentials. Provider availability, quotas and access conditions still apply. General-web coverage remains an unmet goal; [the provider review](docs/engine-adapters.md#provider-access-review--2026-10-11) explains why Google, Bing and DuckDuckGo are absent.
+The six default sources are GitHub, Wikipedia, Crossref, arXiv, Hacker News and Wikimedia Commons. All start enabled without third-party API credentials. LUMEN searches selected sources concurrently, normalizes and deduplicates results, then applies explainable ranking. Provider availability, quotas and access conditions still apply; [the provider review](docs/engine-adapters.md#provider-access-review--2026-10-11) explains source selection.
 
 The redesigned interface separates [Search](docs/migration-v3.md), Research workspace, Saved items, Search profiles, Settings and comparison. Collections, notes, tags, profiles and optional history remain in browser storage. The existing LUMEN logo and wordmark are preserved.
 
@@ -38,7 +38,7 @@ Python 3.12+, uv, Node 22 and Bun are used for development. Containers use non-r
 
 ## Limitations
 
-Sources provide specialized discovery rather than comprehensive web coverage. Crossref and arXiv return research metadata rather than guaranteed full text; Hacker News focuses on technology and is not comprehensive current news. Maps, videos and a dedicated file index remain unavailable. Filters and pagination vary by source, and local post-filters may reduce result counts. Rankings and comparison overlap are heuristics, not objective quality scores.
+LUMEN does not index the entire web and is not a Google, Bing or DuckDuckGo replacement. Coverage depends on selected sources. Crossref and arXiv return research metadata rather than guaranteed full text; Hacker News focuses on technology and is not comprehensive current news. Provider quotas and access policies can make results incomplete or unavailable. Maps, videos and a dedicated file index remain unavailable. Filters and pagination vary by source, and local post-filters may reduce result counts. Rankings and comparison overlap are heuristics, not objective quality scores.
 
 Caches, cooldowns and quotas are process-local; extra workers multiply upstream traffic. Browser storage belongs to its origin: export collections before changing hosts. Queries reach selected providers and optional images may contact their hosts; see the privacy guide.
 

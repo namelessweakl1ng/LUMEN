@@ -1,5 +1,7 @@
 # Deployment
 
+LUMEN is a self-hosted developer and research discovery service. It queries six specialized public sources rather than indexing the whole web; upstream availability, quotas and access policies affect results. Search queries reach the selected providers. See [engine adapters](engine-adapters.md) for source-specific limits.
+
 ## Docker Compose
 
 Install Docker Engine and the Compose plugin (on Fedora, use the official Docker installation instructions or a compatible Compose-enabled container runtime). From the checkout:

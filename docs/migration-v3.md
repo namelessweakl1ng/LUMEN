@@ -8,7 +8,7 @@ Navigation now has dedicated `/search`, `/workspace`, `/saved`, `/profiles`, `/s
 
 Existing IndexedDB collections and browser profile/preferences storage are preserved. Export JSON before changing origin or clearing storage; deployments on another scheme, host or port cannot read the former origin's data. History remains opt-in. Unsupported or retired engines should not be selected in new profiles; remaining valid local profile settings are retained.
 
-The initial V3 release used five default adapters and retained experimental, disabled DuckDuckGo HTML and Google News RSS modules. PR #5 retired those modules and added enabled arXiv research search. See the [current source registry and access review](engine-adapters.md). Neither release claims comprehensive general-web coverage.
+The initial V3 release used five default adapters and retained experimental, disabled DuckDuckGo HTML and Google News RSS modules. PR #5 retired those modules, added enabled arXiv research search and finalized LUMEN's developer and research discovery positioning. The built-in General, Developer, Research and News source configurations and default profile remain unchanged. Existing user-created profiles and browser data retain their stored settings. See the [current source registry and access review](engine-adapters.md). LUMEN does not claim comprehensive general-web coverage.
 
 ## Screenshots
 
