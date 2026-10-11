@@ -1,10 +1,10 @@
 import type { Engine } from "@/types/search";
-/** Domains and preferred domains are applied locally by SearchService. */
+/** Domains, preferred domains and file types are applied locally by SearchService. */
 export function supportsProfileFilter(
   engines: Engine[],
   filter: string,
 ): boolean {
-  if (["site", "exclude_site", "preferred_domains"].includes(filter))
+  if (["site", "exclude_site", "preferred_domains", "file_type"].includes(filter))
     return true;
   if (filter === "time_range") return supportsDateFilter(engines);
   return (
@@ -17,6 +17,6 @@ export function supportsDateFilter(engines: Engine[]): boolean {
   return engines.some(
     (engine) =>
       engine.filters.includes("time_range") ||
-      ["github", "crossref", "hackernews", "google_news"].includes(engine.id),
+      ["github", "crossref", "hackernews"].includes(engine.id),
   );
 }

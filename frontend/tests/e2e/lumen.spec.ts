@@ -56,6 +56,7 @@ test("source selection is explicit and shareable", async ({ page }) => {
 test("advanced filters constrain results and reset in one action", async ({ page }) => {
   await search(page);
   await page.getByRole("button", { name: /^Filters/ }).click();
+  await expect(page.getByLabel("File type", { exact: true })).toBeEnabled();
   await page.getByLabel("Include domain", { exact: true }).fill("github.com");
   await page.getByLabel("Include domain", { exact: true }).press("Enter");
   await expect(page).toHaveURL(/site=github.com/);
@@ -68,11 +69,36 @@ test("advanced filters constrain results and reset in one action", async ({ page
 });
 
 test("pagination advances the page parameter", async ({ page }) => {
-  await page.goto("/search?q=linux&engines=github&limit=1");
+  await page.goto("/search?q=linux&engines=github&limit=1&profile=developer");
   await expect(page.getByTestId("search-result")).toHaveCount(1);
+  await expect(page.getByLabel("Search profile", { exact: true })).toHaveValue("developer");
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(page).toHaveURL(/page=2/);
+  await expect(page.getByLabel("Search profile", { exact: true })).toHaveValue("developer");
   await expect(page.getByRole("button", { name: "Previous page" })).toBeVisible();
+});
+
+test("copy URL stays safe when browser clipboard is unavailable", async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true }));
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await search(page);
+  await page.getByRole("button", { name: "Copy URL for Linux", exact: true }).click();
+  expect(errors).toEqual([]);
+});
+
+test("settings show temporary source availability", async ({ page }) => {
+  await page.route("**/api/v1/engines", async route => {
+    const response = await route.fetch();
+    const payload = await response.json();
+    payload.engines[0].availability = "rate_limited";
+    payload.engines[1].availability = "unavailable";
+    await route.fulfill({ response, json: payload });
+  });
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Sources", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Sources" }).getByText("Rate limited", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Sources" }).getByText("Temporarily unavailable", { exact: true })).toBeVisible();
 });
 
 test("profiles can be created renamed and deleted without losing stored profiles", async ({ page }) => {
@@ -88,6 +114,24 @@ test("profiles can be created renamed and deleted without losing stored profiles
   await page.getByRole("button", { name: "Delete Renamed", exact: true }).click();
   await page.getByRole("button", { name: "Confirm delete", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Renamed", exact: true })).toHaveCount(0);
+});
+
+test("profile draft survives a browser storage write failure", async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === "lumen-profiles") throw new DOMException("Storage full", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+  });
+  await page.goto("/profiles");
+  await page.getByRole("button", { name: "Create profile", exact: true }).click();
+  await page.getByLabel("Profile name").fill("Unsaved research");
+  await page.getByRole("button", { name: "Save profile", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Profile editor" })).toBeVisible();
+  await expect(page.getByLabel("Profile name")).toHaveValue("Unsaved research");
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: "Profiles could not be saved" })).toBeVisible();
 });
 
 test("V2 profile data survives the new management interface", async ({ page }) => {
@@ -154,11 +198,12 @@ test("comparison reports shared and unique results with real provider statuses",
   await expect(page.getByRole("region", { name: "right comparison results" })).toContainText("success");
 });
 
-test("RSS news is clearly labeled in fixture-enabled source mode", async ({ page }) => {
+test("retired RSS source is unavailable in production news searches", async ({ page }) => {
   await page.goto("/search?q=linux&category=news&engines=google_news");
-  await expect(page.getByRole("heading", { name: /Linux kernel release/ })).toBeVisible();
-  await expect(page.getByTestId("search-result")).toContainText("Example News");
-  await expect(page.getByTestId("search-result")).toContainText("News article");
+  await expect(page.getByRole("status").filter({ hasText: "All selected sources are unavailable" })).toBeVisible();
+  await expect(page.getByTestId("search-result")).toHaveCount(0);
+  await page.getByRole("button", { name: /^Sources/ }).click();
+  await expect(page.getByRole("checkbox", { name: "Google News RSS" })).toHaveCount(0);
 });
 
 test("empty and partial failures are understandable", async ({ page }) => {
@@ -261,6 +306,7 @@ test("profile defaults support local domain and date filters", async ({ page }) 
   await expect(page.getByLabel("Include domain", { exact: true })).toBeEnabled();
   await expect(page.getByLabel("Exclude domain", { exact: true })).toBeEnabled();
   await expect(page.getByLabel("Date range", { exact: true })).toBeEnabled();
+  await expect(page.getByLabel("File type", { exact: true })).toBeEnabled();
 });
 
 test("changing category clears incompatible date filters", async ({ page }) => {
@@ -287,6 +333,19 @@ test("comparison result attribution stays with the submitted profiles and query"
   await page.getByRole("button", { name: "Export JSON", exact: true }).click();
   const exported = JSON.parse(await (await import("node:fs/promises")).readFile((await (await downloaded).path())!, "utf8"));
   expect(exported.bookmarks[0].query).toBe("linux");
+});
+
+test("blocked profile comparison clears prior results", async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("lumen-profiles")) localStorage.setItem("lumen-profiles", JSON.stringify([{ id: "retired-only", name: "Retired only", category: "general", engines: ["legacy_retired"], ranking: "balanced", safe_search: 1, language: "en", time_range: "none", site: "", exclude_site: "", file_type: "", preferred_domains: "" }]));
+  });
+  await page.goto("/compare?q=linux");
+  await page.getByRole("button", { name: "Compare profiles", exact: true }).click();
+  await expect(page.getByRole("region", { name: "left comparison results" })).toBeVisible();
+  await page.getByLabel("Left profile", { exact: true }).selectOption("retired-only");
+  await page.getByRole("button", { name: "Compare profiles", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "All selected sources are unavailable" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "left comparison results" })).toHaveCount(0);
 });
 
 test("idle details refresh other-tab notes before editing", async ({ page, context }) => {

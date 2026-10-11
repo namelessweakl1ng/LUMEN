@@ -148,9 +148,10 @@ export function ProfilesPage() {
                     <button
                       className="lumen-button"
                       onClick={() => {
-                        deleteProfile(p.id);
-                        setDeleteId("");
-                        if (draft?.id === p.id) setDraft(null);
+                        if (deleteProfile(p.id)) {
+                          setDeleteId("");
+                          if (draft?.id === p.id) setDraft(null);
+                        }
                       }}
                     >
                       Confirm delete
@@ -182,9 +183,10 @@ export function ProfilesPage() {
                 <button
                   className="lumen-button"
                   onClick={() => {
-                    restoreDefaults();
-                    setDraft(null);
-                    setConfirmRestore(false);
+                    if (restoreDefaults()) {
+                      setDraft(null);
+                      setConfirmRestore(false);
+                    }
                   }}
                 >
                   Confirm restore defaults
@@ -219,9 +221,10 @@ export function ProfilesPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!draft.name.trim()) return;
-                saveProfile({ ...draft, name: draft.name.trim() });
-                setNotice("Profile saved.");
-                setDraft(null);
+                if (saveProfile({ ...draft, name: draft.name.trim() })) {
+                  setNotice("Profile saved.");
+                  setDraft(null);
+                }
               }}
             >
               <h2 className="text-xl font-semibold">

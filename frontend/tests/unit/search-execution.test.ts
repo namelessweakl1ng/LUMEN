@@ -32,9 +32,10 @@ describe("source-aware execution copies", () => {
     const result = prepareSearch(input, engines);
     expect(result.params.get("q")).toBe("cat");
     expect(result.params.get("site")).toBe("example.org");
-    for (const key of ["time_range", "language", "file_type", "safe_search"])
+    expect(result.params.get("file_type")).toBe("pdf");
+    for (const key of ["time_range", "language", "safe_search"])
       expect(result.params.has(key)).toBe(false);
-    expect(result.cleared).toHaveLength(4);
+    expect(result.cleared).toHaveLength(3);
     expect(input.get("time_range")).toBe("week");
   });
   it("keeps local date filtering for dated sources", () => {

@@ -9,7 +9,6 @@ export interface SearchInputProps {
   id?: string;
   label?: string;
   placeholder?: string;
-  autoFocusOnMount?: boolean;
   inputRef?: RefObject<HTMLInputElement | null>;
   spellCheck?: boolean;
   name?: string;

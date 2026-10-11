@@ -50,7 +50,7 @@ export const BUILTINS: Profile[] = [
     id: "news",
     name: "News",
     category: "news",
-    engines: ["google_news", "hackernews"],
+    engines: ["hackernews"],
     ranking: "recency",
   },
 ];

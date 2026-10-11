@@ -125,9 +125,14 @@ export function SettingsPage() {
                       <div className="flex justify-between gap-4">
                         <strong>{engine.name}</strong>
                         <span className="text-muted-foreground">
-                          {engine.enabled && engine.configured
-                            ? "Available"
-                            : "Unavailable"}
+                          {engine.availability === "rate_limited"
+                            ? "Rate limited"
+                            : engine.availability === "unavailable"
+                              ? "Temporarily unavailable"
+                              : engine.enabled && engine.configured &&
+                                  (!engine.availability || engine.availability === "available")
+                                ? "Available"
+                                : "Unavailable"}
                         </span>
                       </div>
                       <details className="mt-2">

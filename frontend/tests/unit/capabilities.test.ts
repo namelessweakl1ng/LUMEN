@@ -16,14 +16,15 @@ const engine = (id: string, filters: string[] = []): Engine => ({
 });
 describe("search filter capabilities", () => {
   it("permits local domain filters independently of upstream capability", () => {
-    for (const field of ["site", "exclude_site", "preferred_domains"]) {
+    for (const field of ["site", "exclude_site", "preferred_domains", "file_type"]) {
       expect(supportsProfileFilter([engine("wikipedia")], field)).toBe(true);
       expect(supportsProfileFilter([], field)).toBe(true);
     }
   });
   it("enables date filtering for dated adapters or declared source filters", () => {
-    for (const id of ["github", "crossref", "hackernews", "google_news"])
+    for (const id of ["github", "crossref", "hackernews"])
       expect(supportsDateFilter([engine(id)])).toBe(true);
+    expect(supportsDateFilter([engine("google_news")])).toBe(false);
     expect(supportsDateFilter([engine("other", ["time_range"])])).toBe(true);
     expect(supportsDateFilter([engine("wikipedia")])).toBe(false);
   });

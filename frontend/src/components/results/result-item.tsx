@@ -128,8 +128,11 @@ export function ResultItem({
           className="lumen-button"
           aria-label={`Copy URL for ${result.title}`}
           onClick={() => {
-            navigator.clipboard
-              .writeText(result.url)
+            if (!navigator.clipboard) {
+              setCopied(false);
+              return;
+            }
+            void navigator.clipboard.writeText(result.url)
               .then(() => setCopied(true))
               .catch(() => setCopied(false));
           }}

@@ -23,17 +23,17 @@ const Profiles = createContext<{
   profiles: Profile[];
   builtins: Profile[];
   customProfiles: Profile[];
-  saveProfile: (p: Profile) => void;
-  deleteProfile: (id: string) => void;
-  restoreDefaults: () => void;
+  saveProfile: (p: Profile) => boolean;
+  deleteProfile: (id: string) => boolean;
+  restoreDefaults: () => boolean;
   error: string;
 }>({
   profiles: BUILTINS,
   builtins: BUILTINS,
   customProfiles: [],
-  saveProfile: () => {},
-  deleteProfile: () => {},
-  restoreDefaults: () => {},
+  saveProfile: () => false,
+  deleteProfile: () => false,
+  restoreDefaults: () => false,
   error: "",
 });
 export function SearchProvider({ children }: { children: ReactNode }) {
@@ -91,8 +91,10 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("lumen-profiles", JSON.stringify(next));
       setCustom(next);
       setError("");
+      return true;
     } catch {
       setError("Browser storage is unavailable. Profiles could not be saved.");
+      return false;
     }
   };
   const builtins = BUILTINS.map((p) => ({

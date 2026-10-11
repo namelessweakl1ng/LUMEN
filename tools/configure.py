@@ -8,6 +8,7 @@ content = path.read_text() if path.exists() else ""
 lines = content.splitlines()
 existing = [line for line in lines if line.startswith("LUMEN_PROXY_SECRET=")]
 if existing and existing[0].partition("=")[2].strip():
+    path.chmod(0o600)
     print("Internal proxy secret already configured; existing settings preserved.")
 else:
     lines = [line for line in lines if not line.startswith("LUMEN_PROXY_SECRET=")]

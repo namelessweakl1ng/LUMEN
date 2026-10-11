@@ -10,7 +10,7 @@ import { ResultsList } from "@/components/results/results-list";
 import { SourceSelection, AdvancedFilters } from "./search-filters";
 import { useSources, useProfiles } from "./search-context";
 import { prepareSearch } from "@/lib/search/execution";
-import { supportsDateFilter } from "@/lib/search/capabilities";
+import { supportsDateFilter, supportsProfileFilter } from "@/lib/search/capabilities";
 import { profileParams } from "@/lib/search/profiles";
 import { usePreferences } from "@/lib/search/preferences-store";
 import { recordSearch } from "@/lib/research/store";
@@ -59,10 +59,9 @@ export function SearchScreen({ landing = false }: { landing?: boolean }) {
     if (value) p.set(key, value);
     else p.delete(key);
     if (key !== "page") p.delete("page");
-    p.delete("profile");
+    if (key !== "page") p.delete("profile");
     if (key === "category") {
       p.delete("engines");
-      p.delete("profile");
     }
     if (key === "category" || key === "engines")
       navigate(prepareSearch(p, engines).params);
@@ -79,8 +78,7 @@ export function SearchScreen({ landing = false }: { landing?: boolean }) {
   const active = selected.length
     ? available.filter((e) => selected.includes(e.id))
     : available;
-  const supported = (field: string) =>
-    active.length > 0 && active.every((e) => e.filters.includes(field));
+  const supported = (field: string) => supportsProfileFilter(active, field);
   const supportsDate = supportsDateFilter(active);
   const submit = (value: string) => {
     const p = new URLSearchParams(sp.toString());

@@ -35,6 +35,10 @@ export function ComparisonScreen() {
     const lp = prepareProfile(l, engines),
       rp = prepareProfile(r, engines);
     if (lp.blocked || rp.blocked) {
+      setData(undefined);
+      setSubmitted(undefined);
+      setNotice("");
+      setLoading(false);
       setError(
         "All selected sources are unavailable in a profile. Edit it before comparing.",
       );

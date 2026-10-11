@@ -12,8 +12,11 @@ try {
       const controls = [...document.querySelectorAll('button,input:not([type=checkbox]),select,textarea,.lumen-panel,.result-item')].filter(visible);
       return {
         overflow: document.documentElement.scrollWidth > innerWidth,
-        rounded: controls.filter(e => parseFloat(getComputedStyle(e).borderTopLeftRadius) !== 0).map(e => e.tagName),
-        gradients: [...document.querySelectorAll('body,main,button,.lumen-panel')].filter(visible).filter(e => getComputedStyle(e).backgroundImage.includes('gradient')).map(e => e.tagName),
+        rounded: controls.filter(e => {
+          const style = getComputedStyle(e);
+          return ['borderTopLeftRadius','borderTopRightRadius','borderBottomRightRadius','borderBottomLeftRadius'].some(corner => parseFloat(style[corner]) !== 0);
+        }).map(e => e.tagName),
+        gradients: [...document.querySelectorAll('*')].filter(visible).filter(e => getComputedStyle(e).backgroundImage.includes('gradient')).map(e => e.tagName),
       };
     });
     evidence.push({screen:name,...issues});
