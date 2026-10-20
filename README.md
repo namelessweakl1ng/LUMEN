@@ -1,45 +1,68 @@
 # LUMEN — Developer & Research Discovery
 
-LUMEN is an open-source, self-hosted discovery platform for developers, computer science students, researchers, engineers and technical learners. It brings open-source repositories, scientific papers, technical discussions, encyclopedic knowledge and openly licensed images into one search interface. It helps people compare sources and organize findings with customizable search profiles, explainable ranking, comparison tools and browser-local research collections.
+**Discover code. Explore research. Connect knowledge.**
 
-The six default sources are GitHub, Wikipedia, Crossref, arXiv, Hacker News and Wikimedia Commons. All start enabled without third-party API credentials. LUMEN searches selected sources concurrently, normalizes and deduplicates results, then applies explainable ranking. Provider availability, quotas and access conditions still apply; [the provider review](docs/engine-adapters.md#provider-access-review--2026-10-11) explains source selection.
+LUMEN is an open-source, self-hosted discovery workspace for developers, students, researchers, engineers and technical learners. It searches six public sources through one interface, explains its ranking, and lets you compare and save findings in your browser. No account or third-party API key is required.
 
-The redesigned interface separates [Search](docs/migration-v3.md), Research workspace, Saved items, Search profiles, Settings and comparison. Collections, notes, tags, profiles and optional history remain in browser storage. The existing LUMEN logo and wordmark are preserved.
+![LUMEN search homepage](docs/screenshots/v3-home-light.png)
 
-## Run with Docker
+## Repository profile
+
+| Area | Current implementation |
+| --- | --- |
+| Frontend | Next.js 16, React 19, TypeScript and Bun in `frontend/` |
+| Backend | Python 3.12, FastAPI, HTTPX and uv in `backend/` |
+| Data | Browser-local profiles, preferences, collections and notes; bounded in-memory backend cache |
+| Deployment and checks | `compose.yml`, `.env.example` and `.github/workflows/ci.yml`; no database, Redis or SearXNG service |
+
+## What LUMEN searches
+
+| Source | Discover |
+| --- | --- |
+| GitHub | Open-source repositories |
+| Wikipedia | Encyclopedic knowledge |
+| Crossref | Scholarly publication metadata |
+| arXiv | Scientific papers and preprints |
+| Hacker News | Technology submissions and discussions |
+| Wikimedia Commons | Openly licensed images |
+
+All six sources are enabled by default. The built-in **General**, **Developer**, **Research** and **News** profiles offer useful starting points; News covers technology submissions from Hacker News, not general news. The science category can include arXiv. You can select sources and filters, inspect per-source status and ranking details, compare profiles, and keep collections, notes and tags in your browser. Optional search history starts disabled.
+
+## Run locally
+
+Install Docker Engine with the Compose plugin, then run:
 
 ```sh
 git clone https://github.com/namelessweakl1ng/LUMEN.git
 cd LUMEN
 python tools/configure.py
 docker compose up --build -d
+curl --fail http://localhost:3000/api/v1/health
 ```
 
-The configuration helper generates a random internal proxy secret in `.env` and preserves existing settings. This secret authenticates LUMEN's own services; it is not a provider credential. Only frontend port 3000 is published. Open http://localhost:3000 and check `curl --fail http://localhost:3000/api/v1/health`. See [deployment](docs/deployment.md) for local development, HTTPS and tuning.
+Open `http://localhost:3000`. Try a repository search with **Developer**, switch to **Research** or the science category for papers, save a result to the **Research workspace**, and compare profiles from the comparison view. The configuration helper creates an internal proxy secret in ignored `.env`; it is not a provider credential. Compose publishes only the frontend on port 3000. Use `docker compose down` to stop the stack. See [deployment](docs/deployment.md) for local development without Docker, HTTPS and runtime configuration.
 
-## Architecture
+## How it works
 
 ```text
-Browser / Next.js / React / IndexedDB
+Browser / Next.js / IndexedDB
   -> same-origin signed API proxy
-  -> FastAPI / HTTPX / asyncio
-  -> source adapters / bounded concurrent requests
-  -> normalization / filtering / deduplication / ranking / TTL cache
+  -> FastAPI / bounded concurrent HTTP requests
+  -> six source adapters
+  -> normalization / filtering / deduplication / explainable ranking / TTL cache
 ```
 
-Python 3.12+, uv, Node 22 and Bun are used for development. Containers use non-root runtime users, health checks and frozen dependency locks.
+Run backend checks with `cd backend && uv sync --frozen && uv run ruff check . && uv run mypy app && uv run pytest`. Run frontend checks with `cd frontend && bun install --frozen-lockfile && bun run lint && bun run typecheck && bun run test && bun run build`. Browser tests and fixture setup are in [testing](docs/testing.md); CI also builds both Docker images.
 
 ## Documentation
 
-- [Architecture](docs/architecture.md), [search execution](docs/search-engine.md), [ranking](docs/ranking.md)
-- [Adapters and access conditions](docs/engine-adapters.md), [API](docs/api.md)
-- [Deployment](docs/deployment.md), [privacy](docs/privacy.md), [testing](docs/testing.md), [validation](docs/validation.md)
-- [V3 migration and screenshots](docs/migration-v3.md), [V1/V2 provenance](docs/migration-v2.md)
+- [Architecture](docs/architecture.md), [search execution](docs/search-engine.md), [ranking](docs/ranking.md) and [API](docs/api.md)
+- [Source capabilities and access conditions](docs/engine-adapters.md), [deployment](docs/deployment.md) and [privacy](docs/privacy.md)
+- [Testing](docs/testing.md), [validation record](docs/validation.md) and [V3 screenshots](docs/migration-v3.md#screenshots)
+- [V1/V2 provenance and migration](docs/migration-v2.md)
 
-## Limitations
+## Limits and privacy
 
-LUMEN does not index the entire web and is not a Google, Bing or DuckDuckGo replacement. Coverage depends on selected sources. Crossref and arXiv return research metadata rather than guaranteed full text; Hacker News focuses on technology and is not comprehensive current news. Provider quotas and access policies can make results incomplete or unavailable. Maps, videos and a dedicated file index remain unavailable. Filters and pagination vary by source, and local post-filters may reduce result counts. Rankings and comparison overlap are heuristics, not objective quality scores.
+LUMEN does not index the entire web or replace Google, Bing or DuckDuckGo. Coverage, freshness, filters and pagination depend on the selected sources. Crossref and arXiv may provide metadata rather than full text; Hacker News is not comprehensive news coverage. Provider quotas, access policies and outages can make results incomplete or unavailable. Rankings and comparison overlap are heuristics, not quality scores.
 
-Caches, cooldowns and quotas are process-local; extra workers multiply upstream traffic. Browser storage belongs to its origin: export collections before changing hosts. Queries reach selected providers and optional images may contact their hosts; see the privacy guide.
-
-V1 used SearXNG. V2 and V3 independently implement the search layer while preserving Git history and the existing [license](LICENSE).
+Search queries reach the selected upstream providers. Profiles, collections and notes stay in your browser, but changing the site origin creates a separate storage area; export research before moving a deployment. Caches and provider rate limits are process-local. arXiv needs shared request coordination before running multiple backend replicas. See [privacy](docs/privacy.md) and [source access conditions](docs/engine-adapters.md) before public deployment. LUMEN retains its [license](LICENSE) and [project history](docs/migration-v2.md).
