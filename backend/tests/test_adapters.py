@@ -1,16 +1,12 @@
 import httpx
 import pytest
 
-from app.engines.sources import (
-    AdapterError,
-    Commons,
-    Crossref,
-    GitHub,
-    HackerNews,
-    Wikipedia,
-    clean,
-    safe_url,
-)
+from app.engines.base import AdapterError, clean, safe_url
+from app.engines.commons import Commons
+from app.engines.crossref import Crossref
+from app.engines.github import GitHub
+from app.engines.hackernews import HackerNews
+from app.engines.wikipedia import Wikipedia
 from app.models import SearchQuery
 
 CASES = [

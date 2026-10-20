@@ -5,7 +5,8 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from app.core.search import SearchService, canonical_url
+from app.core.search import SearchService
+from app.core.urls import canonical_url
 from app.models import SearchQuery, SearchResult
 
 

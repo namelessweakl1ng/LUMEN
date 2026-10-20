@@ -6,7 +6,7 @@ Required checks: backend Ruff, mypy and pytest; frontend lint, TypeScript, unit 
 
 Live smoke uses [`tools/live_smoke.py`](../tools/live_smoke.py), makes one request per enabled source, and records failures without invented results. It is optional and separate from deterministic fixtures. Provider errors or empty results must not be reported as successful live availability.
 
-The [fixture benchmark](../benchmarks/fixture_search.py) uses injected transport responses. Its latency and cache figures do not measure live-provider performance. Historical JSON artifacts may remain for provenance; replace or date current artifacts before citing them as V3 results.
+The [fixture benchmark](../benchmarks/fixture_search.py) uses injected transport responses. Its latency and cache figures do not measure live-provider performance. Run it again before citing current figures; its stale checked-in result was removed during the final cleanup.
 
 ## Live source observation — 2026-10-10
 
@@ -52,3 +52,5 @@ The scope-alignment update changes homepage, profile and About copy without chan
 PRs #1–#4 were already ancestors of `main`; the five commits from PR #5 were fast-forwarded onto `main`. Backend Ruff and mypy passed, and 105 pytest tests passed. Frontend lint and TypeScript passed, 74 unit tests passed, and the production build passed. All 31 full-stack Playwright tests passed against the fixture-backed FastAPI server. Docker Compose configuration, both production image builds, container health checks and same-origin `/api/v1/health` passed using the cloud trust/proxy override without disabling TLS verification.
 
 Three live searches through the production frontend returned results: General (`python`, limit 3) reported Wikipedia, GitHub, Crossref and Hacker News success; Science reported Wikipedia, Crossref and arXiv success with an arXiv result; Images reported Wikimedia Commons success with three image results. These checks covered all six production sources on this date. They are single observations, not uptime or provider-policy guarantees. The repository root README was refreshed for the public showcase, and three unreferenced pre-V3 screenshots were removed; the V3 screenshots and historical migration evidence remain.
+
+The unused `/api/search` redirect, unimported backend registry shim, test-only compatibility re-exports, stale fixture benchmark JSON and two unused frontend packages (`@vitest/expect` and `tw-animate-css`) were removed. The active versioned API, documented diagnostics endpoint, live-smoke utility and historical migration notes remain.

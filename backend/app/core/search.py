@@ -12,7 +12,6 @@ import httpx
 
 from app.core.cache import SearchCache
 from app.core.ranking import rank_results
-from app.core.urls import canonical_url  # noqa: F401 - public backwards compatible export
 from app.engines.base import AdapterError
 from app.models import EngineStatus, SearchQuery, SearchResponse, SearchResult
 
